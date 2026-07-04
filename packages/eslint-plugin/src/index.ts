@@ -3,7 +3,7 @@ import type { ESLint } from "eslint";
 import { must_use_result } from "./rules/must-use-result.js";
 
 const typed_plugin = {
-	meta: { name: "@f0rbit/eslint-plugin", version: "0.1.0" },
+	meta: { name: "@f0rbit/eslint-plugin", version: "0.1.1" },
 	rules: { "must-use-result": must_use_result },
 } satisfies TSESLint.FlatConfig.Plugin;
 
