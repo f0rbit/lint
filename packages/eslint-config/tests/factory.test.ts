@@ -30,6 +30,9 @@ const function_format = (selectors: NamingSelector[]): string[] | null | undefin
 const find_ban = (configs: Linter.Config[]): unknown =>
 	configs.map((config) => config.rules?.["no-restricted-imports"]).find((rule) => rule !== undefined);
 
+const effective_setting = (configs: Linter.Config[], rule: string): unknown =>
+	configs.reduce<unknown>((setting, config) => config.rules?.[rule] ?? setting, undefined);
+
 const collect_dedupe_rules = (configs: Linter.Config[]): Partial<Linter.RulesRecord> =>
 	configs
 		.filter(is_dedupe_config)
@@ -84,6 +87,25 @@ describe("define_lint_config factory", () => {
 			define_lint_config({ ...base_options, oxlintrc_path: join(fixtures_dir, "oxlintrc-stub.json") }),
 		);
 		expect(dedupe_rules["no-else-return"]).toBe("off");
+	});
+
+	it("keeps the decision-log preset disables off through the full config array", () => {
+		const configs = define_lint_config(base_options);
+		expect(effective_setting(configs, "@typescript-eslint/no-unnecessary-type-arguments")).toBe("off");
+		expect(effective_setting(configs, "@typescript-eslint/require-await")).toBe("off");
+	});
+
+	it("drops the oxlint-off rule from the de-dupe without re-enabling an eslint counterpart", () => {
+		const configs = define_lint_config(base_options);
+		expect(collect_dedupe_rules(configs)["import/no-named-as-default-member"]).toBeUndefined();
+		const named_as_default_member = ["import/no-named-as-default-member", "import-x/no-named-as-default-member"];
+		const enabled_somewhere = configs.some((config) =>
+			named_as_default_member.some((rule) => {
+				const setting = config.rules?.[rule];
+				return setting !== undefined && setting !== "off";
+			}),
+		);
+		expect(enabled_somewhere).toBe(false);
 	});
 
 	it("bans the repo's own package name only when provided", () => {
