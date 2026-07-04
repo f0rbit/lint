@@ -5,7 +5,7 @@ on:
     tags: ["v*"]
 
 jobs:
-  publish:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,11 +14,44 @@ jobs:
           bun-version: 1.3.13
       - run: bun install --frozen-lockfile
       - run: bun run verify
-      - name: Publish workspace packages
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    # npm Trusted Publishers (OIDC) — no NPM_TOKEN secret. Auth is a per-run
+    # OIDC token exchange against the trusted publisher configured on
+    # npmjs.com for each package (owner f0rbit, repo lint, workflow
+    # release.yml, no environment). Provenance is generated automatically by
+    # npm under trusted publishing — no --provenance flag needed.
+    permissions:
+      id-token: write # required for the OIDC exchange
+      contents: read # job-level permissions reset defaults; checkout needs this
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.13
+      # Sanctioned npm exception (repo rule is otherwise bun-only): trusted
+      # publishing requires npm CLI >= 11.5.1, and `bun publish` has no OIDC
+      # support (oven-sh/bun#15601). Split of duties: bun packs the tarballs
+      # (rewriting workspace:* to real versions — npm does not understand the
+      # workspace protocol), npm publishes them via OIDC.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Ensure npm >= 11.5.1 (trusted publishing minimum)
         run: |
-          for pkg in packages/*; do
-            echo "--- publishing $pkg"
-            (cd "$pkg" && bun publish --access public)
+          npm install -g npm@latest
+          npm --version
+      - run: bun install --frozen-lockfile
+      - name: Pack and publish in dependency order
+        # Leaves first, umbrella last, so anyone installing mid-release can
+        # always resolve the exact-pinned lockstep deps of what is published.
+        run: |
+          mkdir -p .tarballs
+          for pkg in oxlint-config oxfmt-config eslint-plugin eslint-config lint; do
+            echo "--- publishing @f0rbit/$pkg"
+            # tail -n1: bun pm pack --quiet emits a leading blank line inside workspaces
+            tarball=$(cd "packages/$pkg" && bun pm pack --quiet --destination "$GITHUB_WORKSPACE/.tarballs" | tail -n1)
+            npm publish "$tarball" --access public
           done
-        env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}

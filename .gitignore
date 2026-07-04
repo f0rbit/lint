@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.tarballs/
 coverage/
 tests/.tmp/
 **/tests/.tmp/
