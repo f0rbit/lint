@@ -1,0 +1,23 @@
+{
+	"name": "@f0rbit/oxfmt-config",
+	"version": "0.1.0",
+	"type": "module",
+	"description": "Shared oxfmt configuration for the f0rbit ecosystem — tabs, print width 120, otherwise Prettier-compatible defaults",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/f0rbit/lint.git",
+		"directory": "packages/oxfmt-config"
+	},
+	"files": ["oxfmtrc.json", "README.md"],
+	"exports": {
+		"./oxfmtrc.json": "./oxfmtrc.json",
+		"./package.json": "./package.json"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"devDependencies": {
+		"oxfmt": "0.57.0"
+	}
+}

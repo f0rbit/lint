@@ -1,0 +1,23 @@
+{
+	"name": "@f0rbit/oxlint-config",
+	"version": "0.1.0",
+	"type": "module",
+	"description": "Shared oxlint configuration for the f0rbit ecosystem — the fast syntactic gate of the two-layer lint model",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/f0rbit/lint.git",
+		"directory": "packages/oxlint-config"
+	},
+	"files": ["oxlintrc.json", "README.md"],
+	"exports": {
+		"./oxlintrc.json": "./oxlintrc.json",
+		"./package.json": "./package.json"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"devDependencies": {
+		"oxlint": "1.72.0"
+	}
+}
