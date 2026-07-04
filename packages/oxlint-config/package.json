@@ -1,6 +1,6 @@
 {
 	"name": "@f0rbit/oxlint-config",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "Shared oxlint configuration for the f0rbit ecosystem — the fast syntactic gate of the two-layer lint model",
 	"license": "MIT",
 	"repository": {
