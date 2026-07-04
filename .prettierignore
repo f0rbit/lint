@@ -1,0 +1,6 @@
+# oxfmt reads this file — repo-specific format exclusions live here so
+# .oxfmtrc.json stays a byte-copy of the canonical @f0rbit/oxfmt-config file.
+packages/*/tests/fixtures/
+tests/.tmp/
+packages/*/tests/.tmp/
+.plans/

@@ -41,22 +41,22 @@ export default define_lint_config({
 
 Two naming presets, one definition:
 
-| Preset | Functions | Variables | Types |
-|---|---|---|---|
-| `snake_case` (corpus) | `create_corpus` | snake_case + UPPER_CASE consts | PascalCase |
-| `camelCase` (scaffolded packages) | `createCorpus` | snake_case + UPPER_CASE consts | PascalCase |
+| Preset                            | Functions       | Variables                      | Types      |
+| --------------------------------- | --------------- | ------------------------------ | ---------- |
+| `snake_case` (corpus)             | `create_corpus` | snake_case + UPPER_CASE consts | PascalCase |
+| `camelCase` (scaffolded packages) | `createCorpus`  | snake_case + UPPER_CASE consts | PascalCase |
 
 Exceptions are **config-scoped, not comment-scoped**: known allowlists go in `overrides` as `files`-scoped blocks. Inline `eslint-disable` requires a description, and unused directives are errors.
 
 ## Packages
 
-| Package | Contents |
-|---|---|
-| `@f0rbit/lint` | Umbrella — the only consumer install. Tool binaries (exact pins), `f0rbit-lint` bin, factory re-export |
-| `@f0rbit/oxlint-config` | Static `oxlintrc.json` — the fast syntactic gate |
-| `@f0rbit/oxfmt-config` | Static `oxfmtrc.json` — tabs, width 120 |
-| `@f0rbit/eslint-config` | `define_lint_config` factory — the thin typed layer |
-| `@f0rbit/eslint-plugin` | Custom org rules (`f0rbit/must-use-result`) — phase 2 |
+| Package                 | Contents                                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| `@f0rbit/lint`          | Umbrella — the only consumer install. Tool binaries (exact pins), `f0rbit-lint` bin, factory re-export |
+| `@f0rbit/oxlint-config` | Static `oxlintrc.json` — the fast syntactic gate                                                       |
+| `@f0rbit/oxfmt-config`  | Static `oxfmtrc.json` — tabs, width 120                                                                |
+| `@f0rbit/eslint-config` | `define_lint_config` factory — the thin typed layer                                                    |
+| `@f0rbit/eslint-plugin` | Custom org rules (`f0rbit/must-use-result`) — phase 2                                                  |
 
 Layout convention is `packages/<tool>-config` per toolchain, reserving room for non-JS languages later (e.g. a future `packages/rustfmt-config`).
 

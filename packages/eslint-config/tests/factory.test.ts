@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { join } from "node:path";
 import type { Linter } from "eslint";
-import { define_lint_config } from "../src/index.js";
+import { define_lint_config, type LintOptions } from "../src/index.js";
 
 const fixtures_dir = join(import.meta.dirname, "fixtures");
 
@@ -24,6 +24,17 @@ const naming_selectors = (configs: Linter.Config[]): NamingSelector[] => {
 
 const is_dedupe_config = (config: Linter.Config): boolean => (config.name ?? "").startsWith("oxlint/");
 
+const function_format = (selectors: NamingSelector[]): string[] | null | undefined =>
+	selectors.find((selector) => selector.selector === "function")?.format;
+
+const find_ban = (configs: Linter.Config[]): unknown =>
+	configs.map((config) => config.rules?.["no-restricted-imports"]).find((rule) => rule !== undefined);
+
+const collect_dedupe_rules = (configs: Linter.Config[]): Partial<Linter.RulesRecord> =>
+	configs
+		.filter(is_dedupe_config)
+		.reduce<Partial<Linter.RulesRecord>>((merged, config) => ({ ...merged, ...config.rules }), {});
+
 describe("define_lint_config factory", () => {
 	it("starts with global ignores", () => {
 		const [first] = define_lint_config(base_options);
@@ -34,8 +45,6 @@ describe("define_lint_config factory", () => {
 	it("flips the function-name format between presets", () => {
 		const snake = naming_selectors(define_lint_config(base_options));
 		const camel = naming_selectors(define_lint_config({ ...base_options, naming: "camelCase" }));
-		const function_format = (selectors: NamingSelector[]) =>
-			selectors.find((selector) => selector.selector === "function")?.format;
 		expect(function_format(snake)).toEqual(["snake_case"]);
 		expect(function_format(camel)).toEqual(["camelCase"]);
 	});
@@ -64,25 +73,20 @@ describe("define_lint_config factory", () => {
 	});
 
 	it("disables oxlint-owned rules in the de-dupe block", () => {
-		const configs = define_lint_config(base_options);
-		const dedupe_rules = Object.assign({}, ...configs.filter(is_dedupe_config).map((config) => config.rules ?? {}));
+		const dedupe_rules = collect_dedupe_rules(define_lint_config(base_options));
 		expect(dedupe_rules["no-else-return"]).toBe("off");
 		expect(dedupe_rules["@typescript-eslint/no-explicit-any"]).toBe("off");
 		expect(dedupe_rules["unicorn/filename-case"]).toBe("off");
 	});
 
 	it("resolves extends when de-duping from a consumer stub", () => {
-		const configs = define_lint_config({
-			...base_options,
-			oxlintrc_path: join(fixtures_dir, "oxlintrc-stub.json"),
-		});
-		const dedupe_rules = Object.assign({}, ...configs.filter(is_dedupe_config).map((config) => config.rules ?? {}));
+		const dedupe_rules = collect_dedupe_rules(
+			define_lint_config({ ...base_options, oxlintrc_path: join(fixtures_dir, "oxlintrc-stub.json") }),
+		);
 		expect(dedupe_rules["no-else-return"]).toBe("off");
 	});
 
 	it("bans the repo's own package name only when provided", () => {
-		const find_ban = (configs: Linter.Config[]) =>
-			configs.map((config) => config.rules?.["no-restricted-imports"]).find((rule) => rule !== undefined);
 		expect(find_ban(define_lint_config(base_options))).toBeUndefined();
 		const banned = find_ban(define_lint_config({ ...base_options, package_name: "@f0rbit/example" }));
 		expect(JSON.stringify(banned)).toContain("@f0rbit/example");
@@ -95,7 +99,9 @@ describe("define_lint_config factory", () => {
 	});
 
 	it("rejects invalid options via the zod schema", () => {
-		expect(() => define_lint_config({ naming: "kebab-case", tsconfig_root_dir: fixtures_dir } as never)).toThrow();
-		expect(() => define_lint_config({ naming: "snake_case" } as never)).toThrow();
+		const bad_naming: unknown = { naming: "kebab-case", tsconfig_root_dir: fixtures_dir };
+		const missing_root: unknown = { naming: "snake_case" };
+		expect(() => define_lint_config(bad_naming as LintOptions)).toThrow();
+		expect(() => define_lint_config(missing_root as LintOptions)).toThrow();
 	});
 });

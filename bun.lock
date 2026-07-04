@@ -5,6 +5,7 @@
     "": {
       "name": "lint-monorepo",
       "devDependencies": {
+        "@f0rbit/lint": "workspace:*",
         "@types/bun": "1.3.14",
         "typescript": "6.0.3",
       },
@@ -28,6 +29,23 @@
         "eslint": "^10.0.0",
         "typescript": ">=5.0.0",
         "typescript-eslint": "^8.62.0",
+      },
+    },
+    "packages/lint": {
+      "name": "@f0rbit/lint",
+      "version": "0.1.0",
+      "bin": {
+        "f0rbit-lint": "./src/bin.ts",
+      },
+      "dependencies": {
+        "@f0rbit/eslint-config": "workspace:*",
+        "@f0rbit/oxfmt-config": "workspace:*",
+        "@f0rbit/oxlint-config": "workspace:*",
+        "eslint": "10.6.0",
+        "jiti": "2.7.0",
+        "oxfmt": "0.57.0",
+        "oxlint": "1.72.0",
+        "typescript-eslint": "8.62.1",
       },
     },
     "packages/oxfmt-config": {
@@ -67,6 +85,8 @@
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.7.2", "", { "dependencies": { "@eslint/core": "^1.2.1", "levn": "^0.4.1" } }, "sha512-+CNAzxglkrpNf/kKywqQfk74QjtceuOE7Qm+AF8miRvPF/wmmK5+OJOgVh3AVTT3RP2mH3+FOaxlE5v72owk0A=="],
 
     "@f0rbit/eslint-config": ["@f0rbit/eslint-config@workspace:packages/eslint-config"],
+
+    "@f0rbit/lint": ["@f0rbit/lint@workspace:packages/lint"],
 
     "@f0rbit/oxfmt-config": ["@f0rbit/oxfmt-config@workspace:packages/oxfmt-config"],
 
@@ -325,6 +345,8 @@
     "is-immutable-type": ["is-immutable-type@5.0.4", "", { "dependencies": { "@typescript-eslint/type-utils": "^8.0.0", "ts-api-utils": "^2.0.0", "ts-declaration-location": "^1.0.4" }, "peerDependencies": { "eslint": "*", "typescript": ">=4.7.4" } }, "sha512-tDf0vB9dJJt/1USS2nvHJb8UsIAhs+pF6z8UZLNdhrzB+PKMrdcN45je9jhuFpaJOjJpoRhueFmFrRs5g/TNMA=="],
 
     "isexe": ["isexe@2.0.0", "", {}, "sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw=="],
+
+    "jiti": ["jiti@2.7.0", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ=="],
 
     "json-buffer": ["json-buffer@3.0.1", "", {}, "sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ=="],
 

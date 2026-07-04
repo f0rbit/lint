@@ -22,13 +22,13 @@ export default define_lint_config({
 
 Zod-validated (`LintOptions` is inferred from the schema — single source of truth):
 
-| Option | Type | Effect |
-|---|---|---|
-| `naming` | `"snake_case" \| "camelCase"` | Function-name preset. Variables are snake_case (+UPPER_CASE consts) and types PascalCase in both. |
-| `package_name` | `string?` | Adds a `no-restricted-imports` ban on the repo's own package name. |
-| `tsconfig_root_dir` | `string` | Passed to typescript-eslint's `projectService` — typed rules run on the real TS program. |
-| `overrides` | `Linter.Config[]?` | Repo-specific `files`-scoped exceptions. Spliced in before the oxlint de-dupe block. |
-| `oxlintrc_path` | `string?` | The `.oxlintrc.json` to de-dupe against. Defaults to `./.oxlintrc.json`, falling back to the canonical `@f0rbit/oxlint-config` copy when absent. |
+| Option              | Type                          | Effect                                                                                                                                           |
+| ------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `naming`            | `"snake_case" \| "camelCase"` | Function-name preset. Variables are snake_case (+UPPER_CASE consts) and types PascalCase in both.                                                |
+| `package_name`      | `string?`                     | Adds a `no-restricted-imports` ban on the repo's own package name.                                                                               |
+| `tsconfig_root_dir` | `string`                      | Passed to typescript-eslint's `projectService` — typed rules run on the real TS program.                                                         |
+| `overrides`         | `Linter.Config[]?`            | Repo-specific `files`-scoped exceptions. Spliced in before the oxlint de-dupe block.                                                             |
+| `oxlintrc_path`     | `string?`                     | The `.oxlintrc.json` to de-dupe against. Defaults to `./.oxlintrc.json`, falling back to the canonical `@f0rbit/oxlint-config` copy when absent. |
 
 ## Layer order
 
