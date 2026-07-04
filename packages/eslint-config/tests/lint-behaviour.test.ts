@@ -42,6 +42,11 @@ describe("lint behaviour against fixtures", () => {
 		expect(naming_messages[0]?.message).toContain("createThing");
 	});
 
+	it("flags a discarded Result via f0rbit/must-use-result through the full factory config", async () => {
+		const ids = await rule_ids(create_runner("snake_case"), "result-fixture.ts");
+		expect(ids).toContain("f0rbit/must-use-result");
+	});
+
 	it("camelCase preset accepts createThing and rejects create_thing", async () => {
 		const results = await create_runner("camelCase").lintFiles(["naming-fixture.ts"]);
 		const naming_messages = (results[0]?.messages ?? []).filter(

@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
+import f0rbit from "@f0rbit/eslint-plugin";
 import type { Linter } from "eslint";
 import functional from "eslint-plugin-functional";
 import { importX } from "eslint-plugin-import-x";
@@ -119,6 +120,12 @@ const commented_code: Linter.Config = {
 	rules: { "sonarjs/no-commented-code": "error" },
 };
 
+const org_rules: Linter.Config = {
+	files: ts_files,
+	plugins: { f0rbit },
+	rules: { "f0rbit/must-use-result": "error" },
+};
+
 function oxlint_dedupe(oxlintrc_path: string | undefined): Linter.Config[] {
 	const local = resolve(oxlintrc_path ?? "./.oxlintrc.json");
 	const source = existsSync(local) ? local : require_from_here.resolve("@f0rbit/oxlint-config/oxlintrc.json");
@@ -134,7 +141,7 @@ export function define_lint_config(options: LintOptions): Linter.Config[] {
 		naming_convention(parsed.naming),
 		import_hygiene(parsed.package_name),
 		commented_code,
-		// INSERTION POINT: custom @f0rbit/eslint-plugin org rules land here (phase 2 — f0rbit/must-use-result).
+		org_rules,
 		...(parsed.overrides ?? []),
 		...oxlint_dedupe(parsed.oxlintrc_path),
 	];

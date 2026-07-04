@@ -961,7 +961,7 @@ gh api repos/f0rbit/lint | jq '{squash: .allow_squash_merge, merge: .allow_merge
           <article class="task" id="task-2-1">
             <header>
               <h3>Task 2.1: must-use-result rule + rule-tester suite</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1012,14 +1012,19 @@ gh api repos/f0rbit/lint | jq '{squash: .allow_squash_merge, merge: .allow_merge
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <ul>
+                <li>Commit <code>4311d36</code>. 23 rule-tester cases (15 valid / 8 invalid) all pass; full repo suite 56 tests across 7 files green under <code>bun run verify</code> (typecheck + tests + oxlint + eslint + fmt:check).</li>
+                <li><strong>Coverage matrix</strong> — invalid: bare discard, awaited discard, <code>void</code>-discard, <code>void (await ...)</code>, un-awaited <code>Promise&lt;Result&gt;</code>, generic alias instantiation (<code>ApiResult&lt;T&gt;</code>), nullable union (<code>Result | undefined</code>), optional-chained call. Valid: assigned (plain + awaited), returned, arrow implicit return, argument, array/object literal, destructured, member access (plain + awaited), non-Result call, void-returning call, near-miss union without literal <code>ok</code>, ok-only union without an <code>error</code> arm.</li>
+                <li><strong>Adversary checklist all green</strong>: zero alias-name matching (grep confirms no <code>"Result"</code> string in the rule; consumer sim fired on a homegrown <code>Outcome&lt;T,E&gt;</code>); zero <code>any</code>/<code>as</code> in <code>src/rules/</code>; <code>checker.getAwaitedType</code> path exercised by the un-awaited-Promise test AND the consumer sim; near-miss unions tested valid; messageId <code>discarded_result</code> + <code>docs.description</code> + <code>requiresTypeChecking</code> via <code>RuleCreator&lt;RuleDocs&gt;</code>; adding rule #2 touches only <code>src/rules/</code> + one index line.</li>
+                <li><strong><code>clearCaches()</code> deviation validated</strong>: plugin suite passes in isolation (23), eslint-config suite in isolation (17), both together (40), and the full 56-test run — the workaround isn't masking a projectService misconfiguration; the two suites legitimately need different <code>allowDefaultProject</code> globs and typescript-estree's service is a per-process singleton (documented in AGENTS.md).</li>
+              </ul>
             </section>
           </article>
 
           <article class="task" id="task-2-2">
             <header>
               <h3>Task 2.2: Wire plugin into factory, docs, publish v0.1.0</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1066,7 +1071,12 @@ bunx npm view @f0rbit/lint version</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <ul>
+                <li>Commit <code>3f4796f</code>. Factory tests: <code>f0rbit</code> plugin registered + <code>must-use-result: "error"</code> for BOTH naming presets (not preset-gated); ordering test proves <code>org_rules</code> sits before caller overrides (an override turning the rule off lands later in the array — scopeability proven). Behaviour test surfaces <code>f0rbit/must-use-result</code> through the full <code>define_lint_config</code> output via a real <code>ESLint</code> runner.</li>
+                <li><strong>Consumer simulation (the load-bearing check)</strong>: packed all five tarballs (<code>bun pm pack</code> — manifests confirmed <code>workspace:*</code> → <code>0.1.0</code>), fresh <code>/tmp</code> consumer (hoisted linker, <code>"types": ["bun"]</code>) installing ONLY <code>@f0rbit/lint</code> (<code>file:</code> overrides map the unpublished lockstep siblings to their tarballs). <code>f0rbit-lint init</code> → <code>eslint src/index.ts</code> against a <em>homegrown</em> <code>Outcome&lt;T,E&gt;</code> union (zero corpus imports): bare discard L7 and <code>void</code> discard L9 → <code>f0rbit/must-use-result</code>; floating <code>Promise&lt;Outcome&gt;</code> L11 → BOTH <code>@typescript-eslint/no-floating-promises</code> AND <code>f0rbit/must-use-result</code> (the double-report is spec-derived: task-2-1's matrix demands the un-awaited case fires and the typed family carries <code>no-floating-promises</code>); non-Result discards (number-returning call, <code>console.log</code>) silent. Proves the TS-source plugin entry loads transitively under jiti and the matcher is genuinely structural.</li>
+                <li><strong>Sanctioned cast validated</strong>: exactly one <code>as unknown as ESLint.Plugin</code> across both packages' <code>src/</code>, commented at the plugin-export boundary — same widening typescript-eslint 8.62 ships (its own <code>plugin</code> export is typed as the deliberately-loose <code>CompatiblePlugin</code> for the identical structural gap).</li>
+                <li><strong>Release readiness</strong>: lockstep <code>0.1.0</code> in all five packages (root workspace test asserts one version); <code>publishConfig.access: "public"</code> in all five; <code>release.yml</code> triggers on <code>v*</code> tags and plumbs <code>NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}</code>; <code>bun publish --dry-run</code> (oxlint-config) packs clean and fails ONLY on missing auth. <strong>GAP: <code>gh secret list</code> shows no <code>NPM_TOKEN</code> secret on <code>f0rbit/lint</code> yet</strong> — set it before pushing <code>v0.1.0</code>. Tagging deferred to post-merge per close-out instructions.</li>
+              </ul>
             </section>
           </article>
         </section>
