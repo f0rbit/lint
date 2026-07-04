@@ -15,6 +15,7 @@ export default define_lint_config({
 	package_name: "@f0rbit/corpus", // optional — bans importing your own package name
 	tsconfig_root_dir: import.meta.dirname,
 	overrides: [], // files-scoped repo exceptions, spliced in before the oxlint de-dupe
+	module_resolution: "node-esm", // or "bundler" — default preserves node-esm behaviour exactly
 });
 ```
 
@@ -22,13 +23,14 @@ export default define_lint_config({
 
 Zod-validated (`LintOptions` is inferred from the schema — single source of truth):
 
-| Option              | Type                          | Effect                                                                                                                                           |
-| ------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `naming`            | `"snake_case" \| "camelCase"` | Function-name preset. Variables are snake_case (+UPPER_CASE consts) and types PascalCase in both.                                                |
-| `package_name`      | `string?`                     | Adds a `no-restricted-imports` ban on the repo's own package name.                                                                               |
-| `tsconfig_root_dir` | `string`                      | Passed to typescript-eslint's `projectService` — typed rules run on the real TS program.                                                         |
-| `overrides`         | `Linter.Config[]?`            | Repo-specific `files`-scoped exceptions. Spliced in before the oxlint de-dupe block.                                                             |
-| `oxlintrc_path`     | `string?`                     | The `.oxlintrc.json` to de-dupe against. Defaults to `./.oxlintrc.json`, falling back to the canonical `@f0rbit/oxlint-config` copy when absent. |
+| Option              | Type                          | Effect                                                                                                                                                                                                                                                       |
+| ------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `naming`            | `"snake_case" \| "camelCase"` | Function and const-variable preset. Non-const/non-function-typed variables stay snake_case in both presets; types are PascalCase in both. `.tsx` files additionally allow PascalCase functions and const components under either preset (see below).         |
+| `package_name`      | `string?`                     | Adds a `no-restricted-imports` ban on the repo's own package name.                                                                                                                                                                                           |
+| `tsconfig_root_dir` | `string`                      | Passed to typescript-eslint's `projectService` — typed rules run on the real TS program.                                                                                                                                                                     |
+| `overrides`         | `Linter.Config[]?`            | Repo-specific `files`-scoped exceptions. Spliced in before the oxlint de-dupe block.                                                                                                                                                                         |
+| `oxlintrc_path`     | `string?`                     | The `.oxlintrc.json` to de-dupe against. Defaults to `./.oxlintrc.json`, falling back to the canonical `@f0rbit/oxlint-config` copy when absent.                                                                                                             |
+| `module_resolution` | `"node-esm" \| "bundler"?`    | Default `"node-esm"`: relative imports need explicit `.js` extensions (published Node-ESM libraries). `"bundler"`: extensionless relative imports are required instead (tsup/Vite/webpack-resolved packages), via a resolver that understands TS extensions. |
 
 ## Layer order
 
@@ -36,11 +38,12 @@ Zod-validated (`LintOptions` is inferred from the schema — single source of tr
 2. typescript-eslint `strictTypeChecked` + `projectService`, plus `no-floating-promises`, `switch-exhaustiveness-check`, `prefer-readonly`, `consistent-type-assertions` (no object-literal assertions), inline `consistent-type-imports`, and the enum ban (`no-restricted-syntax`)
 3. `eslint-plugin-functional`: `no-classes`, `no-this-expressions`, `no-throw-statements`, `no-try-statements`
 4. `@typescript-eslint/naming-convention` built from the preset
-5. `eslint-plugin-import-x`: extensions on relative imports, `no-self-import`, own-package ban
-6. `eslint-plugin-sonarjs`: `no-commented-code`
-7. Custom org rules insertion point (phase 2: `f0rbit/must-use-result`)
-8. Caller `overrides`
-9. LAST: `eslint-plugin-oxlint` de-dupe — every rule oxlint owns is disabled here
+5. `.tsx`-scoped naming-convention carve-out: widens the function and const selectors to also allow PascalCase (JSX/TSX component convention), under either preset — plain `.ts` is unaffected
+6. `eslint-plugin-import-x`: extensions on relative imports (governed by `module_resolution`), `no-self-import`, own-package ban
+7. `eslint-plugin-sonarjs`: `no-commented-code`
+8. Custom org rules insertion point (phase 2: `f0rbit/must-use-result`)
+9. Caller `overrides`
+10. LAST: `eslint-plugin-oxlint` de-dupe — every rule oxlint owns is disabled here
 
 `linterOptions.reportUnusedDisableDirectives` is `"error"`: stale inline disables fail the lint.
 

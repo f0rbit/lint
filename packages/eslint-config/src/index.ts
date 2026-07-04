@@ -4,12 +4,12 @@ import { resolve } from "node:path";
 import f0rbit from "@f0rbit/eslint-plugin";
 import type { Linter } from "eslint";
 import functional from "eslint-plugin-functional";
-import { importX } from "eslint-plugin-import-x";
+import { createNodeResolver, importX } from "eslint-plugin-import-x";
 import oxlint from "eslint-plugin-oxlint";
 import sonarjs from "eslint-plugin-sonarjs";
 import tseslint from "typescript-eslint";
 import { z } from "zod";
-import { naming_convention_selectors } from "./presets.js";
+import { naming_convention_selectors, naming_convention_selectors_for_components } from "./presets.js";
 
 const require_from_here = createRequire(import.meta.url);
 
@@ -19,6 +19,11 @@ const lint_options_schema = z.object({
 	tsconfig_root_dir: z.string(),
 	overrides: z.array(z.custom<Linter.Config>()).optional(),
 	oxlintrc_path: z.string().optional(),
+	// "node-esm" preserves this factory's original behaviour (explicit .js
+	// extensions on relative imports — required for a published Node-ESM
+	// library). "bundler" is for tsup/Vite/webpack-resolved packages that
+	// write extensionless relative imports by convention.
+	module_resolution: z.enum(["node-esm", "bundler"]).default("node-esm"),
 });
 
 export type LintOptions = z.input<typeof lint_options_schema>;
@@ -89,15 +94,63 @@ function naming_convention(preset: "snake_case" | "camelCase"): Linter.Config {
 	};
 }
 
-function import_hygiene(package_name: string | undefined): Linter.Config {
-	const config: Linter.Config = {
+// Placed after naming_convention() in the config array: flat config resolves a
+// rule per-file from the LAST matching config, so this narrower files: **/*.tsx
+// block wins for .tsx and naming_convention()'s base list stands for plain .ts.
+function tsx_component_convention(preset: "snake_case" | "camelCase"): Linter.Config {
+	return {
+		files: ["**/*.tsx"],
+		rules: {
+			"@typescript-eslint/naming-convention": ["error", ...naming_convention_selectors_for_components(preset)],
+		},
+	};
+}
+
+// import-x's bundled default resolver only recognises ['.mjs', '.cjs', '.js',
+// '.json', '.node'] — an extensionless relative specifier (the bundler
+// convention) never resolves against it, so the rule falls back to treating
+// the specifier as extension-less text and (wrongly) demands one even under
+// "never". Bundler mode wires an explicit resolver-next with TS extensions
+// added so extensionless specifiers actually resolve and the pattern below
+// applies to the real (resolved) extension.
+const bundler_resolver_extensions = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs", ".json", ".node"];
+const bundler_import_resolver = createNodeResolver({ extensions: bundler_resolver_extensions });
+
+// Non-code extensions (json, css, ...) stay on the ignorePackages default in
+// both modes — bundlers still require an explicit extension for those; only
+// the code extensions switch to "never" for bundler-resolved consumers.
+const bundler_code_extensions_pattern: Record<string, "never"> = {
+	ts: "never",
+	tsx: "never",
+	mts: "never",
+	cts: "never",
+	js: "never",
+	jsx: "never",
+	mjs: "never",
+	cjs: "never",
+};
+
+function extensions_rule(module_resolution: "node-esm" | "bundler"): Linter.RuleEntry {
+	if (module_resolution === "node-esm") return ["error", "ignorePackages"];
+	return ["error", "ignorePackages", { pattern: bundler_code_extensions_pattern }];
+}
+
+function import_hygiene(package_name: string | undefined, module_resolution: "node-esm" | "bundler"): Linter.Config {
+	const base: Linter.Config = {
 		files: ts_files,
 		plugins: { "import-x": importX },
 		rules: {
-			"import-x/extensions": ["error", "ignorePackages"],
+			"import-x/extensions": extensions_rule(module_resolution),
 			"import-x/no-self-import": "error",
 		},
 	};
+	// node-esm mode is left byte-for-byte identical to the pre-0.1.4 config
+	// (no settings block) — this is the "preserves corpus/vault/pulse
+	// behaviour exactly" guarantee.
+	const config: Linter.Config =
+		module_resolution === "bundler"
+			? { ...base, settings: { "import-x/resolver-next": [bundler_import_resolver] } }
+			: base;
 	if (!package_name) return config;
 	return {
 		...config,
@@ -143,7 +196,8 @@ export function define_lint_config(options: LintOptions): Linter.Config[] {
 		...typed_family(parsed.tsconfig_root_dir),
 		functional_discipline,
 		naming_convention(parsed.naming),
-		import_hygiene(parsed.package_name),
+		tsx_component_convention(parsed.naming),
+		import_hygiene(parsed.package_name, parsed.module_resolution),
 		commented_code,
 		org_rules,
 		...(parsed.overrides ?? []),
