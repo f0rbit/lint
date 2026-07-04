@@ -1,0 +1,1628 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Plan: @f0rbit/lint — Ecosystem Linting + Formatting</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --border: #30363d;
+        --text: #c9d1d9;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --todo: #6e7681;
+        --doing: #d29922;
+        --done: #2ea043;
+        --blocked: #f85149;
+        --decision: #db61a2;
+      }
+      html, body {
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 2rem;
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      h1, h2, h3 {
+        color: var(--text);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.3em;
+      }
+      h1 { font-size: 1.8rem; }
+      h2 { font-size: 1.4rem; margin-top: 2.5rem; }
+      h3 { font-size: 1.1rem; border: none; padding: 0; margin-top: 1.5rem; }
+      h4 {
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        margin: 0 0 0.3em 0;
+      }
+      code, pre {
+        font-family: "SF Mono", Menlo, monospace;
+        font-size: 0.9em;
+      }
+      code {
+        background: var(--panel);
+        padding: 1px 6px;
+        border-radius: 4px;
+      }
+      pre {
+        background: var(--panel);
+        padding: 12px;
+        border-radius: 6px;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 0.75em;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .badge.todo { background: var(--todo); color: #fff; }
+      .badge.doing { background: var(--doing); color: #000; }
+      .badge.done { background: var(--done); color: #fff; }
+      .badge.blocked { background: var(--blocked); color: #fff; }
+      .badge.decision { background: var(--decision); color: #fff; }
+      .badge.recommended { background: var(--accent); color: #000; }
+      .root-cause {
+        background: var(--panel);
+        border-left: 3px solid var(--accent);
+        padding: 0.75rem 1rem;
+        border-radius: 0 6px 6px 0;
+        margin: 1rem 0;
+      }
+      .root-cause p {
+        margin: 0.4em 0;
+      }
+      .option {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+        opacity: 0.85;
+      }
+      .option.recommended {
+        opacity: 1;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent) inset;
+      }
+      .option > header {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+      .option h3 {
+        margin: 0;
+        flex: 1;
+      }
+      .option h4 {
+        margin-top: 0.9rem;
+      }
+      .philosophy-score th:first-child,
+      .philosophy-score td:first-child {
+        width: 35%;
+      }
+      .philosophy-score td:nth-child(2) {
+        font-family: "SF Mono", Menlo, monospace;
+        font-weight: 600;
+        width: 60px;
+        text-align: center;
+      }
+      .recommendation {
+        background: rgba(88, 166, 255, 0.08);
+        border-left: 3px solid var(--accent);
+        padding: 0.75rem 1rem;
+        border-radius: 0 6px 6px 0;
+        margin: 1.5rem 0;
+      }
+      .recommendation h3 {
+        margin-top: 0;
+        border: none;
+        padding: 0;
+      }
+      .task {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+      }
+      .task > header {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+      }
+      .task h3 {
+        margin: 0;
+        flex: 1;
+      }
+      .meta {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 0.4em 1em;
+        font-size: 0.85em;
+        color: var(--muted);
+        margin: 0 0 0.75rem 0;
+      }
+      .meta dt {
+        font-weight: 600;
+        color: var(--text);
+      }
+      .meta dd {
+        margin: 0;
+      }
+      .task section {
+        margin-top: 0.75rem;
+      }
+      .proof {
+        background: rgba(46, 160, 67, 0.08);
+        border-left: 3px solid var(--done);
+        padding: 0.5rem 0.75rem;
+        border-radius: 0 6px 6px 0;
+      }
+      .empty-proof {
+        background: rgba(110, 118, 129, 0.08);
+        border-left: 3px solid var(--todo);
+        padding: 0.5rem 0.75rem;
+        color: var(--muted);
+        font-style: italic;
+        border-radius: 0 6px 6px 0;
+      }
+      .adversary {
+        background: rgba(219, 97, 162, 0.08);
+        border-left: 3px solid var(--decision);
+        padding: 0.5rem 0.75rem;
+        border-radius: 0 6px 6px 0;
+      }
+      .adversary ul {
+        margin: 0.3em 0;
+        padding-left: 1.5em;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1em 0;
+      }
+      th, td {
+        padding: 0.5em 0.75em;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        font-weight: 600;
+        color: var(--muted);
+        font-size: 0.8em;
+        text-transform: uppercase;
+      }
+      a { color: var(--accent); }
+      .phase {
+        margin: 2rem 0;
+        padding-left: 1rem;
+        border-left: 3px solid var(--accent);
+      }
+      .matrix-wrap {
+        overflow-x: auto;
+      }
+      .matrix td:nth-child(n+2),
+      .matrix th:nth-child(n+2) {
+        text-align: center;
+        white-space: nowrap;
+      }
+      .decision-log {
+        background: rgba(219, 97, 162, 0.08);
+        border-left: 3px solid var(--decision);
+        padding: 0.75rem 1rem;
+        border-radius: 0 6px 6px 0;
+        margin: 1.5rem 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Plan: @f0rbit/lint — Ecosystem Linting + Formatting</h1>
+        <span class="badge todo">todo</span>
+        <p>Build a new monorepo <code>@f0rbit/lint</code> at <code>~/dev/lint</code> housing all lint + format configuration for the f0rbit ecosystem, then roll it out to corpus (pilot), the devpad scaffolder, and pulse / vault / devpad / ui. Strategy is <strong>Option 2: hybrid oxlint fast gate + thin typed ESLint layer</strong>, with <strong>oxfmt as the formatter everywhere (hard requirement)</strong>. The ESLint layer carries the typed rule family plus the custom type-aware <code>must-use-result</code> rule over the corpus <code>Result&lt;T,E&gt;</code> shape. Configs ship as factory functions parameterised per repo (naming preset, package name). This plan completes the earlier decision-stop plan that lived at <code>~/dev/corpus/.plans/linting-strategy.html</code> (now a tombstone pointing here).</p>
+      </header>
+
+      <section id="root-cause">
+        <h2>Root cause</h2>
+        <div class="root-cause">
+          <p><strong>Stated goal:</strong> Add automated lint + format enforcement across all repos and scaffolded packages — a monorepo holding "all my formatting rules for all languages", with oxfmt as the formatter.</p>
+          <p><strong>Underlying need:</strong> The style conventions (snake_case naming, no-throw/Result discipline, no-classes, strict-type family, import hygiene, indentation) currently live as prose in per-repo <code>AGENTS.md</code> files, enforced only by AI-agent discipline and review. Drift is caught late or never. The real ask is the "let the compiler catch bugs" principle applied to style: every convention that becomes a machine-checked rule is one less thing agents must remember and one less AGENTS.md paragraph that can rot. Formatting is the same problem in its purest form — corpus's "match the file you're editing" rule exists <em>only because</em> no formatter owns the answer.</p>
+          <p><strong>Why this matters:</strong> If the toolchain can't encode the highest-value conventions — must-use-Result over the homegrown <code>Result&lt;T,E&gt;</code>, no-throw across boundaries, the typed no-unsafe-* family — a linter would exist but the root problem (late/never drift detection on the conventions that actually prevent bugs) would persist. That constraint is what eliminated Biome and oxlint-only: custom <em>type-aware</em> rules are ESLint-exclusive. The formatter choice is orthogonal to the linter choice, which is why oxfmt can be a hard requirement without forcing Option 4.</p>
+        </div>
+      </section>
+
+      <section id="alternatives">
+        <h2>Alternatives considered</h2>
+        <p>Full market research and the convention→enforcement matrix were produced in the first planning pass (two market reports: toolchain landscape + convention→rule mapping). The four options and their scores are preserved below; the user has since <strong>decided</strong> — see the decision log after the options.</p>
+
+        <h3 id="convention-matrix">Convention → enforcement matrix</h3>
+        <p>Which conventions each option can machine-check (✓ = maintained rule exists, <em>typed</em> = requires type-aware linting, <em>alpha</em> = works only via an alpha runtime, ✗ = stays prose/review).</p>
+        <div class="matrix-wrap">
+          <table class="matrix">
+            <thead>
+              <tr>
+                <th>Convention</th>
+                <th>1: ESLint-only</th>
+                <th>2: Hybrid</th>
+                <th>3: Biome</th>
+                <th>4: oxlint-only</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>snake_case vars+functions, PascalCase types, UPPER_CASE consts (selector-granular)</td>
+                <td>✓</td>
+                <td>✓</td>
+                <td>partial</td>
+                <td>alpha (JS plugin)</td>
+              </tr>
+              <tr>
+                <td>kebab-case filenames</td>
+                <td>✓ (unicorn)</td>
+                <td>✓ (oxlint native)</td>
+                <td>✓</td>
+                <td>✓</td>
+              </tr>
+              <tr>
+                <td>no-classes / no-this (allowlist: <code>Semaphore</code>)</td>
+                <td>✓ (functional)</td>
+                <td>✓ (ESLint layer)</td>
+                <td>partial (GritQL)</td>
+                <td>alpha (JS plugin)</td>
+              </tr>
+              <tr>
+                <td>no-throw / no-try except edges (allowlists: <code>build()</code>, <code>testing/</code>)</td>
+                <td>✓ (functional)</td>
+                <td>✓ (ESLint layer)</td>
+                <td>partial (GritQL)</td>
+                <td>alpha (JS plugin)</td>
+              </tr>
+              <tr>
+                <td>no-any, no-non-null, consistent-type-assertions, no-enums, type-only imports</td>
+                <td>✓</td>
+                <td>✓ (mostly oxlint native)</td>
+                <td>mostly ✓</td>
+                <td>✓ (native)</td>
+              </tr>
+              <tr>
+                <td>no-unsafe-* family, switch-exhaustiveness, no-floating-promises, prefer-readonly</td>
+                <td>✓ typed</td>
+                <td>✓ typed (ESLint layer)</td>
+                <td>✗</td>
+                <td>alpha typed (tsgolint)</td>
+              </tr>
+              <tr>
+                <td>max-depth 5, no-else-return, early-return nudges</td>
+                <td>✓</td>
+                <td>✓ (oxlint native)</td>
+                <td>✓</td>
+                <td>✓</td>
+              </tr>
+              <tr>
+                <td>import extensions <code>.js</code>, no-self-import, own-package-name ban</td>
+                <td>✓ (import-x)</td>
+                <td>✓ (split across layers)</td>
+                <td>mostly ✓</td>
+                <td>partial</td>
+              </tr>
+              <tr>
+                <td>no-commented-out-code</td>
+                <td>✓ (sonarjs)</td>
+                <td>✓ (ESLint layer)</td>
+                <td>✗</td>
+                <td>alpha (JS plugin)</td>
+              </tr>
+              <tr>
+                <td><strong>must-use-Result (homegrown, custom typed rule)</strong></td>
+                <td>✓ custom</td>
+                <td>✓ custom (ESLint layer)</td>
+                <td>✗ permanently</td>
+                <td>✗ permanently</td>
+              </tr>
+              <tr>
+                <td><strong>Zod-validate at boundaries (custom typed rule, later)</strong></td>
+                <td>✓ custom</td>
+                <td>✓ custom</td>
+                <td>✗</td>
+                <td>✗</td>
+              </tr>
+              <tr>
+                <td><strong>Formatting owned by oxfmt (hard requirement)</strong></td>
+                <td>✓ orthogonal</td>
+                <td>✓ orthogonal, same vendor</td>
+                <td>✗ (Biome formats)</td>
+                <td>✓ same vendor</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <article class="option" id="option-1">
+          <header>
+            <h3>Option 1: ESLint-only — single-tool typed linting</h3>
+          </header>
+          <p>ESLint v9 flat config + typescript-eslint v8 with <code>projectService</code>, shipped as one shared config package. Plugins: <code>eslint-plugin-functional</code>, <code>eslint-plugin-unicorn</code>, <code>eslint-plugin-import-x</code>, <code>eslint-plugin-sonarjs</code>. Every matrix row maps to a maintained rule; custom typed rules land in the same package. Was the planner's original recommendation on scoring (4.8/5), when formatting was out of scope.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Shopify (<code>@shopify/eslint-plugin</code>)</strong> — one npm package carrying shared flat config + custom org rules, extended by every repo; chosen because custom rules and config travel/version together. <a href="https://github.com/Shopify/web-configs">source</a></li>
+            <li><strong>Vercel (<code>@vercel/style-guide</code>)</strong> — same distribution shape; ESLint chosen because typed + org-specific rules have no equivalent elsewhere. <a href="https://github.com/vercel/style-guide">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Highest prose→rule coverage; one tool, one config surface, zero alpha dependencies.</li>
+            <li>Custom type-aware rules (must-use-result) are a solved problem with a first-class test harness.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Slowest in absolute terms (typed lint spins a TS program on every run, including editor-save).</li>
+            <li>Does not answer the formatting requirement at all — a formatter must be added anyway, so the "one tool" advantage evaporates once oxfmt is a hard requirement.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>5/5</td>
+                <td>One flat-config package defines style once; repos extend; custom rules co-versioned.</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>5/5</td>
+                <td>Full typed family enforced, all stable today.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>5/5</td>
+                <td>Every matrix row machine-checked including must-use-result.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>4/5</td>
+                <td>Typed rules run on the same TS program as <code>tsc</code> via <code>projectService</code> — no second type-semantics.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>5/5</td>
+                <td>Custom rules tested with <code>@typescript-eslint/rule-tester</code> against in-memory source strings under <code>bun test</code>.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p><strong>Average: 4.8/5</strong> — but scores the pre-oxfmt framing; with formatting in scope it needs a second vendor anyway.</p>
+        </article>
+
+        <article class="option recommended" id="option-2">
+          <header>
+            <h3>Option 2: Hybrid — oxlint fast gate + thin typed ESLint layer + oxfmt</h3>
+            <span class="badge recommended">recommended</span>
+            <span class="badge done">chosen by user</span>
+          </header>
+          <p>The posture oxc's own docs recommend: oxlint runs the broad syntactic rule set everywhere it's fast (editor-save, first CI step), while a slimmed-down ESLint config runs <em>only</em> what oxlint can't — the typed rule family, <code>eslint-plugin-functional</code>, naming-convention, import hygiene, and the custom rules. <code>eslint-plugin-oxlint</code> disables the overlap on the ESLint side (same mechanism as <code>eslint-config-prettier</code>), applied LAST in the flat-config array. oxfmt (same vendor as oxlint) owns formatting. Identical enforcement coverage to Option 1; the second tool is bought for feedback-loop speed and vendor coherence with the mandated formatter.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>oxc project guidance</strong> — oxlint docs recommend running oxlint <em>alongside</em> ESLint with <code>eslint-plugin-oxlint</code> de-duplication; hybrid is the officially supported posture. <a href="https://oxc.rs/docs/guide/usage/linter">source</a></li>
+            <li><strong>Shopify admin</strong> — adopted oxlint as the fast gate on a very large app while keeping ESLint org-rule infrastructure; chosen for lint-time cuts without giving up custom rules. <a href="https://voidzero.dev/posts/announcing-oxlint-1-stable">source</a></li>
+            <li><strong>typescript-eslint trajectory</strong> — by late 2026 the ESLint layer of a hybrid shrinks toward "custom type-aware rules only", which stays ESLint-exclusive; hybrid is the smart-money end-state. <a href="https://typescript-eslint.io/blog/parser-options-project-service">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Same 100% convention coverage as Option 1 — typed + custom rules stay on the ESLint side; must-use-result ships.</li>
+            <li>Near-instant feedback for the syntactic majority on every save; the typed ESLint pass reserved for pre-push/CI.</li>
+            <li>Vendor-coherent with the mandated formatter: oxlint + oxfmt share config philosophy, release cadence, and one upstream to track.</li>
+            <li>Tracks the ecosystem trajectory: as tsgolint matures, rules migrate from the ESLint layer to oxlint config-by-config with no architectural change.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Two lint tools, two config dialects, two version streams in the shared package — a permanent carrying cost. Mitigated by centralising all version pins in one umbrella package.</li>
+            <li>Rule-split reasoning ("which tool flags this?") is a new failure mode when debugging CI; <code>eslint-plugin-oxlint</code>'s <code>buildFromOxlintConfigFile</code> makes the overlap mechanical but the de-dupe must be regenerated whenever oxlint's ruleset is bumped.</li>
+            <li>oxfmt is alpha — <strong>accepted risk, user's explicit choice</strong>. Mitigation: exact version pins, one place to bump, normalization commits isolated with <code>.git-blame-ignore-revs</code>.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>4/5</td>
+                <td>One shared monorepo, but style expressed across two lint config surfaces (<code>.oxlintrc.json</code> + flat config) that must stay coherent; <code>eslint-plugin-oxlint</code> automates the overlap, and the umbrella package makes version pins single-sourced.</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>5/5</td>
+                <td>Identical typed enforcement to Option 1 — typed family + custom rules run in the retained ESLint layer with <code>projectService</code>.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>5/5</td>
+                <td>Same matrix coverage as Option 1, and violations surface <em>earlier</em> (on save) for the syntactic majority. Formatting drift becomes machine-checked too (<code>fmt:check</code> in CI).</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>4/5</td>
+                <td>Typed checks stay on the real TS program (ESLint layer); oxlint's layer is syntactic-only so it cannot disagree with tsc.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>5/5</td>
+                <td>Custom rules tested with rule-tester against in-memory sources; config factories tested by asserting over returned config arrays; binary tools tested against tiny fixture trees.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p><strong>Average: 4.6/5</strong></p>
+        </article>
+
+        <article class="option" id="option-3">
+          <header>
+            <h3>Option 3: Biome all-in-one</h3>
+          </header>
+          <p>Biome 2.x as the single tool for formatting and linting: one binary, one <code>biome.json</code>. Throw/class bans approximated with GritQL patterns (syntactic, diagnostic-only). Deliberately accepts losing the typed unsafe-* family, must-use-result (no committed JS plugin API), and selector-granular naming.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Rsbuild / Rspress (web-infra-dev)</strong> — Biome for format+lint across the Rspack ecosystem; chosen for single-binary speed. <a href="https://github.com/web-infra-dev/rspress">source</a></li>
+            <li><strong>Astro (some repos)</strong> — Biome where formatting speed and one-tool simplicity outweighed rule depth. <a href="https://github.com/withastro/astro">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Simplest operational story: one binary, format+lint in one pass.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Weakest fit for this ecosystem's <em>unusual</em> conventions — the ones motivating the plan. must-use-result is permanently impossible; the largest share of AGENTS.md prose stays prose.</li>
+            <li>Incompatible with the oxfmt hard requirement: Biome insists on its own formatter, so it is <strong>eliminated by constraint</strong>, independent of its 2.2/5 score.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>3/5</td>
+                <td>Un-encodable conventions stay in AGENTS.md prose — style definition permanently split.</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>2/5</td>
+                <td>No no-unsafe-* family, no switch-exhaustiveness; homegrown inference is PoC, single-file.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>2/5</td>
+                <td>Lowest prose→rule conversion of the four; Result discipline stays review-enforced.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>2/5</td>
+                <td>Single-file inference cannot follow types across module boundaries.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>2/5</td>
+                <td>GritQL patterns have no rule-tester equivalent; org conventions unverifiable in CI.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p><strong>Average: 2.2/5</strong></p>
+        </article>
+
+        <article class="option" id="option-4">
+          <header>
+            <h3>Option 4: oxlint-only + JS plugins (full replacement)</h3>
+          </header>
+          <p>oxlint 1.x as the sole linter: native rules for the syntactic set, tsgolint alpha for typed rules, the JS-plugin alpha runtime for <code>eslint-plugin-functional</code>. Maximum speed, one lint vendor — and a hard ceiling: JS plugins <em>cannot</em> be type-aware, so must-use-result and Zod-at-edge are permanently off the table.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Mercedes-Benz.io</strong> — full oxlint replacement across their frontend estate, 71–97% lint-time reduction; their rule needs fit oxlint's native set. <a href="https://voidzero.dev/posts/announcing-oxlint-1-stable">source</a></li>
+            <li><strong>Charpentier migration</strong> — ESLint+Biome+Prettier → oxlint+oxfmt+3 JS plugins, 81s→2.5s; chosen to collapse three tools into one vendor. <a href="https://oxc.rs/blog">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Fastest option; one lint vendor, and the same vendor as the mandated formatter.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Custom type-aware rules are permanently impossible — must-use-result, the single highest-value rule for a Result-typed codebase, never ships on this path. This is what eliminated it head-to-head against Option 2.</li>
+            <li>Two alpha dependencies on the critical path today (tsgolint typed rules + JS-plugin runtime), on top of the accepted oxfmt alpha.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>4/5</td>
+                <td>One config + plugin bundle, but must-use-result / Zod-at-edge stay AGENTS.md prose forever.</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>3/5</td>
+                <td>Typed family rides an alpha (tsgolint) with OOM + TS7-semantics caveats.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>3/5</td>
+                <td>The two custom typed rules — the highest-leverage conversions — are structurally excluded.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>3/5</td>
+                <td>tsgolint uses typescript-go semantics — a second type system that can disagree with <code>bun run typecheck</code>'s tsc.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>3/5</td>
+                <td>JS-plugin rules are asserted under ESLint's rule-tester but executed under oxlint's runtime — untestable parity gap.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p><strong>Average: 3.2/5</strong></p>
+        </article>
+
+        <section class="recommendation">
+          <h3>Decision log: Option 2 chosen, oxfmt hard requirement <span class="badge done">decided</span></h3>
+          <p><strong>User decision (2026-07-04):</strong> "pick between 2 and 4 if one of the hard requirements is oxfmt" — the orchestrator picked <strong>Option 2</strong>. Rationale: the formatter choice is linter-orthogonal (oxfmt works identically in both options), so the tiebreaker is what each option forecloses. Option 4 permanently forecloses custom type-aware rules — <code>must-use-result</code> over the homegrown <code>Result&lt;T,E&gt;</code> is the single most bug-preventing rule available to a never-throw codebase, and it is only buildable in an ESLint layer. Option 2 keeps it, at the cost of a second lint tool whose overlap is mechanically de-duplicated.</p>
+          <p><strong>oxfmt's alpha status is an accepted risk</strong> — the user's explicit choice. Mitigations baked into this plan: exact version pins centralised in one umbrella package, normalization commits isolated in their own PRs with <code>.git-blame-ignore-revs</code>, and <code>fmt:check</code> (not auto-fix) in CI so a formatter behaviour change can never rewrite code in CI.</p>
+          <p><strong>Home decision:</strong> a new monorepo <code>@f0rbit/lint</code> at <code>~/dev/lint</code> (repo already created, empty). The user's framing — "a monorepo that has all my formatting rules for all languages" — means the layout reserves room for non-JS/TS toolchains later (<code>packages/&lt;tool&gt;-config</code> convention, e.g. a future <code>packages/rustfmt-config</code>); initial scope is the JS/TS toolchain only.</p>
+        </section>
+      </section>
+
+      <section id="affected-areas">
+        <h2>Affected areas</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Path</th>
+              <th>Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>~/dev/lint/</code> (new monorepo, GitHub <code>f0rbit/lint</code>)</td>
+              <td>new — workspace root, CI, README, AGENTS.md, 5 packages (phases 1–2)</td>
+            </tr>
+            <tr>
+              <td><code>~/dev/lint/packages/{oxlint-config,oxfmt-config,eslint-config,eslint-plugin,lint}</code></td>
+              <td>new — the two-layer config packages, custom rule plugin, umbrella package</td>
+            </tr>
+            <tr>
+              <td><code>~/dev/corpus/</code> — <code>package.json</code>, <code>eslint.config.ts</code>, <code>.oxlintrc.json</code>, <code>.oxfmtrc.json</code>, <code>.git-blame-ignore-revs</code>, <code>.github/workflows/*</code>, <code>AGENTS.md</code>, every source file (format normalization)</td>
+              <td>modify — pilot repo (phase 3); "match the file you're editing" rule replaced by "oxfmt owns formatting"</td>
+            </tr>
+            <tr>
+              <td><code>~/dev/devpad/packages/pipeline-templates/src/scaffolder/templates/</code></td>
+              <td>modify — scaffolded packages get lint/format wiring from day one (phase 4)</td>
+            </tr>
+            <tr>
+              <td><code>~/dev/vault</code>, <code>~/dev/pulse</code>, <code>~/dev/ui</code>, <code>~/dev/devpad</code></td>
+              <td>modify — rollout: deps, configs, normalization commit, violation fixes, CI, AGENTS.md (phase 5)</td>
+            </tr>
+            <tr>
+              <td><code>~/dev/corpus/.plans/linting-strategy.html</code></td>
+              <td>modify — tombstone pointing at this plan (done at plan-writing time)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="architecture-decisions">
+        <h2>Architecture decisions</h2>
+        <p>Calls made within the chosen approach. None require user input — the one genuinely architectural decision (toolchain + home) was already made by the user and is recorded in the decision log above.</p>
+        <ul>
+          <li><strong>Five workspace packages, one consumer install.</strong> Layout follows the agreed split (<code>oxlint-config</code>, <code>eslint-config</code>, <code>oxfmt-config</code>, <code>eslint-plugin</code>) plus a fifth <strong>umbrella package <code>@f0rbit/lint</code></strong> (<code>packages/lint</code>) that depends on all four AND carries the exact-pinned tool binaries (<code>oxlint</code>, <code>oxfmt</code>, <code>eslint</code>, <code>typescript-eslint</code>, plugins). Consumers install <em>one</em> dependency; bun hoists transitive bins into <code>node_modules/.bin</code>, so <code>oxlint</code>/<code>oxfmt</code>/<code>eslint</code> resolve in scripts. This makes the alpha-version pins single-sourced (principle 1): bumping oxlint/oxfmt happens in exactly one <code>package.json</code> in the ecosystem.</li>
+          <li><strong>Plugin package name is <code>@f0rbit/eslint-plugin</code></strong> (directory <code>packages/eslint-plugin</code>), not the suggested <code>eslint-plugin-f0rbit</code> — flat config imports plugins as ordinary modules so the legacy naming convention buys nothing, and staying inside the <code>@f0rbit</code> scope keeps npm publishing uniform. Rule namespace in configs is <code>f0rbit</code> (e.g. <code>f0rbit/must-use-result</code>).</li>
+          <li><strong>Configs are factory functions.</strong> <code>define_lint_config({ naming: "snake_case" | "camelCase", package_name?, tsconfig_root_dir, overrides? })</code> in <code>@f0rbit/eslint-config</code> returns the flat-config array. Corpus uses snake_case functions; scaffolded packages use camelCase — one definition, per-repo parameters. The oxlint + oxfmt configs are static JSON (naming lives in the ESLint layer; nothing repo-varying on the oxlint side).</li>
+          <li><strong>oxlint config sharing uses an explicit relative path</strong>: consumer <code>.oxlintrc.json</code> is a 3-line stub — <code>{ "extends": ["./node_modules/@f0rbit/oxlint-config/oxlintrc.json"] }</code>. Node-module specifier resolution in oxlint's <code>extends</code> is not guaranteed across alpha-era versions; a relative path into bun's hoisted <code>node_modules</code> always works. Same pattern considered for oxfmt: if the pinned oxfmt version supports config <code>extends</code>, use it; otherwise <code>f0rbit-lint init</code> copies the canonical <code>.oxfmtrc.json</code> and CI drift is caught by <code>f0rbit-lint check</code> (byte-comparison against the package's canonical copy).</li>
+          <li><strong><code>f0rbit-lint</code> init/check bin</strong> ships in the umbrella package (~80 LOC): <code>init</code> writes the consumer stubs (<code>.oxlintrc.json</code>, <code>.oxfmtrc.json</code>, <code>eslint.config.ts</code> factory call, package.json scripts); <code>check</code> verifies the copied configs haven't drifted from the canonical package copies. This is also what the scaffolder template calls, so scaffolder and manual adoption share one code path.</li>
+          <li><strong>Format style (single ecosystem-wide choice):</strong> tabs, print width 120, otherwise Prettier-compatible oxfmt defaults. Tabs matches the scaffolded-package convention in <code>pipelines-setup</code> ("Style: … Tabs.") and the majority of corpus source. Recorded once in <code>@f0rbit/oxfmt-config</code>; trivial to change before any normalization commit lands, painful after — so it is fixed now.</li>
+          <li><strong>De-dupe direction: ESLint yields to oxlint.</strong> The factory appends <code>eslint-plugin-oxlint</code>'s <code>buildFromOxlintConfigFile("./.oxlintrc.json")</code> output LAST in the flat-config array, so any rule oxlint owns is disabled in ESLint. <strong>Regeneration rule:</strong> whenever the pinned <code>oxlint</code> version is bumped, <code>eslint-plugin-oxlint</code> must be bumped to the matching version in the same commit (its versions track oxlint's ruleset) — captured in the lint repo's AGENTS.md.</li>
+          <li><strong>Lockstep versioning, tag-triggered publish.</strong> All five packages share one version number; a <code>v*</code> tag triggers the release workflow (<code>bun publish</code> per package, <code>NPM_TOKEN</code> repo secret — mirror the corpus/ui publish setup if one exists; no runtime secrets in this repo, so no vault loader). No changesets — five packages moving in lockstep don't need independent versioning.</li>
+          <li><strong>Exceptions are config-scoped, not comment-scoped.</strong> Known allowlists (corpus: <code>Semaphore</code> in <code>concurrency.ts</code>, <code>create_corpus().build()</code> throw in <code>corpus.ts</code>, <code>testing/</code> construction throws, <code>tests/</code>) are <code>files</code>-scoped overrides in the repo-local <code>eslint.config.ts</code>. Inline <code>eslint-disable</code> requires a description and <code>--report-unused-disable-directives</code> is on.</li>
+          <li><strong>Normalization is always its own PR</strong> (exactly one squashed commit containing only formatting), and the <code>.git-blame-ignore-revs</code> entry referencing the post-squash main SHA lands in the <em>next</em> PR. Squash-merging a combined PR would fuse formatting with logic changes and make the ignore-revs SHA unrecordable. Also set <code>git config blame.ignoreRevsFile .git-blame-ignore-revs</code> in each repo's AGENTS.md bootstrap notes (GitHub's blame UI honours the file automatically).</li>
+          <li><strong>Commit/PR title hygiene (new workflow rule, applies to every task below):</strong> commit and PR titles are plain conventional-commit descriptions of the change — NEVER containing "phase", "task", plan names, or task IDs. Those details live in PR bodies and branch names. All integration is squash-based. The new lint repo is configured squash-merge-only from day one; <strong>corpus's merge-commit-only setting is flipped to squash-only in phase 3</strong> (its AGENTS.md line "PRs on this repo merge with merge commits only" is updated in the same phase).</li>
+          <li><strong>CI gate order in consumer repos:</strong> <code>oxlint</code> → <code>eslint</code> → <code>oxfmt --check</code> as a single <code>lint</code> step after typecheck/tests. oxlint first because it fails in milliseconds; fmt runs in check mode only (CI never rewrites code).</li>
+          <li><strong>Warn→error graduation:</strong> on existing repos, rules whose violations are fixed in the adoption PR ship at <code>error</code>; rules needing non-mechanical refactors start at <code>warn</code> with a graduation item appended to that repo's TODO/backlog. No rule stays at <code>warn</code> permanently.</li>
+          <li><strong>devpad task mirroring is deferred</strong> — devpad MCP tools are not available in this session. The verification coder for phase 1 should create the devpad project + tasks via <code>devpad_*</code> tools if available in its session; otherwise this stays a deferred item in out-of-scope. Task IDs will be back-filled into this plan when created.</li>
+          <li><strong>Page-vs-integrate gate: n/a</strong> — no UI, pages, or nav anywhere in this plan.</li>
+        </ul>
+      </section>
+
+      <section id="phases">
+        <h2>Phases</h2>
+        <p>Five sequential phases. Within phase 1, tasks 1.2 and 1.3 run in parallel (worktrees); within phase 5, the four repo rollouts are independent repos and run in parallel. Every phase ends with the standard close-out: verification coder merges worktrees (if any), runs typecheck + tests + self-lint, fills proof slots, writes AGENTS.md entries, commits, opens a PR; <code>pr-shepherd</code> drives it to squash-merge.</p>
+        <svg viewBox="0 0 1040 190" xmlns="http://www.w3.org/2000/svg" style="max-width:100%; height:auto;">
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b949e"/>
+            </marker>
+          </defs>
+          <g font-family="-apple-system, sans-serif" font-size="12" fill="#c9d1d9">
+            <rect x="10" y="70" width="150" height="50" rx="8" fill="#161b22" stroke="#58a6ff"/>
+            <text x="85" y="90" text-anchor="middle">P1: Scaffold</text>
+            <text x="85" y="106" text-anchor="middle" fill="#8b949e">@f0rbit/lint (1.2∥1.3)</text>
+            <rect x="200" y="70" width="150" height="50" rx="8" fill="#161b22" stroke="#58a6ff"/>
+            <text x="275" y="90" text-anchor="middle">P2: must-use-result</text>
+            <text x="275" y="106" text-anchor="middle" fill="#8b949e">+ publish v0.1.0</text>
+            <rect x="390" y="70" width="150" height="50" rx="8" fill="#161b22" stroke="#58a6ff"/>
+            <text x="465" y="90" text-anchor="middle">P3: corpus pilot</text>
+            <text x="465" y="106" text-anchor="middle" fill="#8b949e">wire→normalize→fix→CI</text>
+            <rect x="580" y="70" width="150" height="50" rx="8" fill="#161b22" stroke="#58a6ff"/>
+            <text x="655" y="90" text-anchor="middle">P4: scaffolder</text>
+            <text x="655" y="106" text-anchor="middle" fill="#8b949e">devpad templates</text>
+            <rect x="810" y="10" width="130" height="34" rx="8" fill="#161b22" stroke="#30363d"/>
+            <text x="875" y="31" text-anchor="middle">P5: vault</text>
+            <rect x="810" y="54" width="130" height="34" rx="8" fill="#161b22" stroke="#30363d"/>
+            <text x="875" y="75" text-anchor="middle">P5: pulse</text>
+            <rect x="810" y="98" width="130" height="34" rx="8" fill="#161b22" stroke="#30363d"/>
+            <text x="875" y="119" text-anchor="middle">P5: ui</text>
+            <rect x="810" y="142" width="130" height="34" rx="8" fill="#161b22" stroke="#30363d"/>
+            <text x="875" y="163" text-anchor="middle">P5: devpad</text>
+            <line x1="160" y1="95" x2="198" y2="95" stroke="#8b949e" marker-end="url(#arr)"/>
+            <line x1="350" y1="95" x2="388" y2="95" stroke="#8b949e" marker-end="url(#arr)"/>
+            <line x1="540" y1="95" x2="578" y2="95" stroke="#8b949e" marker-end="url(#arr)"/>
+            <line x1="730" y1="95" x2="808" y2="27" stroke="#8b949e" marker-end="url(#arr)"/>
+            <line x1="730" y1="95" x2="808" y2="71" stroke="#8b949e" marker-end="url(#arr)"/>
+            <line x1="730" y1="95" x2="808" y2="115" stroke="#8b949e" marker-end="url(#arr)"/>
+            <line x1="730" y1="95" x2="808" y2="159" stroke="#8b949e" marker-end="url(#arr)"/>
+          </g>
+        </svg>
+
+        <section class="phase" id="phase-1">
+          <h3>Phase 1: Scaffold the @f0rbit/lint monorepo</h3>
+          <p>Stand up the workspace at <code>~/dev/lint</code> per <code>project-setup</code> conventions: root wiring + CI + branch protection (task 1.1), the two static config packages and the ESLint factory package in parallel (1.2 ∥ 1.3), then the umbrella package that ties it together and dogfoods the toolchain on the repo itself (1.4). No custom rules yet. Nothing is published in this phase.</p>
+
+          <article class="task" id="task-1-1">
+            <header>
+              <h3>Task 1.1: Workspace root, CI, branch protection, repo seed</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>package.json</code>, <code>tsconfig.json</code>, <code>.gitignore</code>, <code>README.md</code>, <code>AGENTS.md</code>, <code>CLAUDE.md</code>, <code>.github/workflows/ci.yml</code>, <code>.github/workflows/release.yml</code>, <code>.plans/.gitkeep</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~220</dd>
+              <dt>Dependencies</dt>
+              <dd>none</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none (root must exist before packages)</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Repo <code>/Users/tom/dev/lint</code> is empty (only <code>.git</code>, remote <code>https://github.com/f0rbit/lint.git</code>, no commits yet — the default branch will be created by the first push; this plan file at <code>.plans/linting-strategy.html</code> is the only file present). This is a bun-workspaces monorepo publishing five npm packages under the <code>@f0rbit</code> scope. It is the single source of truth for lint + format configuration across the f0rbit ecosystem (corpus, pulse, vault, devpad, ui, and packages scaffolded by <code>devpad pipelines init</code>). Layout convention: <code>packages/&lt;tool&gt;-config</code> per toolchain, reserving room for non-JS languages later (e.g. a future <code>packages/rustfmt-config</code>). Runtime is bun everywhere — no npm/npx anywhere in scripts or workflows. This repo has no runtime secrets, so no vault loader / <code>.secrets.json</code>; the only secret is <code>NPM_TOKEN</code> for publishing.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Root <code>package.json</code>: <code>"name": "lint-monorepo"</code>, <code>"private": true</code>, <code>"workspaces": ["packages/*"]</code>, scripts: <code>typecheck</code> (<code>tsc --noEmit</code>), <code>test</code> (<code>bun test</code>), <code>lint</code> (<code>oxlint . &amp;&amp; eslint .</code>), <code>fmt</code> (<code>oxfmt .</code>), <code>fmt:check</code> (oxfmt in check mode — verify exact flag with the pinned version's <code>--help</code>), <code>verify</code> (typecheck + test + lint + fmt:check).</li>
+                <li>Root <code>tsconfig.json</code>: <code>strict</code>, <code>noUncheckedIndexedAccess</code>, <code>exactOptionalPropertyTypes</code>, <code>module</code>/<code>moduleResolution</code> suited to bun + published packages (NodeNext), <code>include: ["packages/*/src/**/*.ts"]</code>.</li>
+                <li><code>.gitignore</code>: <code>node_modules/</code>, <code>dist/</code>, <code>coverage/</code>, <code>tests/.tmp/</code>.</li>
+                <li><code>README.md</code>: explain the <strong>two-layer model</strong> (oxlint = fast syntactic gate; thin typed ESLint layer = typed family + custom org rules; oxfmt = formatting), the umbrella-install pattern (consumers depend only on <code>@f0rbit/lint</code>), the factory-function pattern with the two naming presets, the multi-language <code>packages/&lt;tool&gt;-config</code> convention, and the version-pinning policy (exact pins; oxlint and eslint-plugin-oxlint bump together).</li>
+                <li><code>AGENTS.md</code> seed + one-line <code>CLAUDE.md</code> (<code>@AGENTS.md</code>): repo purpose, layout, scripts, the de-dupe regeneration rule, the commit-title hygiene rule (no "phase"/"task"/plan names in titles; squash-merge only), and "this repo dogfoods its own configs".</li>
+                <li><code>.github/workflows/ci.yml</code>: job <code>verify</code> — <code>oven-sh/setup-bun@v2</code>, <code>bun install --frozen-lockfile</code>, <code>bun run verify</code>. Pin bun to 1.3.13 (1.3.14 segfaults — known from pulse CI).</li>
+                <li><code>.github/workflows/release.yml</code>: on tag <code>v*</code> — install, verify, then <code>bun publish</code> for each workspace package with <code>NPM_TOKEN</code>. Check how <code>@f0rbit/ui</code> or <code>@f0rbit/corpus</code> publish (their repos are local at <code>~/dev/ui</code>, <code>~/dev/corpus</code>) and mirror the auth pattern.</li>
+                <li>Branch protection via <code>gh api</code>: required status check <code>verify</code>, 1 approving review, allow auto-merge; repo settings: <strong>squash-merge only</strong> (disable merge commits + rebase). Surface the one-click Copilot review enablement to the user once.</li>
+                <li>Note in the PR body (not the commit title) that lint/fmt scripts will fail until 1.4 wires the workspace packages — gate CI's lint step behind the packages existing, or land ci.yml with <code>bun run typecheck &amp;&amp; bun test</code> only and let 1.4 flip <code>verify</code> to the full script.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && bun install && bun run typecheck && bun test
+gh api repos/f0rbit/lint | jq '{squash: .allow_squash_merge, merge: .allow_merge_commit, rebase: .allow_rebase_merge}'</pre>
+              <p>Expected: typecheck passes (no packages yet is fine — empty include is acceptable, or a placeholder), <code>bun test</code> exits 0 with no tests, repo settings show <code>squash: true, merge: false, rebase: false</code>.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>No <code>npm</code>/<code>npx</code> anywhere in scripts or workflows — bun/bunx only.</li>
+                  <li>tsconfig has all three strictness flags (<code>strict</code>, <code>noUncheckedIndexedAccess</code>, <code>exactOptionalPropertyTypes</code>).</li>
+                  <li>Bun version pinned in both workflows (1.3.13, not latest).</li>
+                  <li>Branch protection requires the <code>verify</code> check by exact job name used in ci.yml.</li>
+                  <li>README documents the eslint-plugin-oxlint ↔ oxlint version-coupling rule.</li>
+                  <li>Suggested commit title contains no "phase"/"task"/plan name (e.g. <code>chore: scaffold lint monorepo workspace and ci</code>).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-1-2">
+            <header>
+              <h3>Task 1.2: packages/oxlint-config + packages/oxfmt-config</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/oxlint-config/{package.json,oxlintrc.json,README.md}</code>, <code>packages/oxfmt-config/{package.json,oxfmtrc.json,README.md}</code>, <code>packages/oxlint-config/tests/oxlint-fixtures.test.ts</code>, <code>packages/oxfmt-config/tests/oxfmt-fixtures.test.ts</code>, fixture files under each package's <code>tests/fixtures/</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~180</dd>
+              <dt>Dependencies</dt>
+              <dd>task-1-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-1-3</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast (worktree; do NOT run build/lint/test verification — parallel agents active)</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Repo <code>/Users/tom/dev/lint</code>, bun workspace monorepo (root scaffolded by a parallel task; assume <code>packages/*</code> workspaces exist). These two packages are the <em>static</em> layer of a two-layer lint model: oxlint runs a broad fast syntactic rule set; a thin typed ESLint layer (separate package, parallel task) handles typed + custom rules; oxfmt owns formatting. Naming conventions live in the ESLint layer, so these configs have no per-repo variation — plain JSON, same everywhere. Ecosystem format style (already decided): <strong>tabs, print width 120, otherwise oxfmt/Prettier defaults</strong>. oxlint and oxfmt are alpha/fast-moving: pin EXACT versions (bun add -E). Style for any TS in this repo: snake_case variables/functions, tabs.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li><code>@f0rbit/oxlint-config</code>: ship <code>oxlintrc.json</code> as the package's main artifact (also list in <code>files</code>). Content: enable plugins <code>typescript</code>, <code>unicorn</code>, <code>import</code>, <code>oxc</code>; categories <code>correctness: "error"</code>, <code>suspicious: "error"</code>; explicit rules mapping the ecosystem conventions that oxlint owns natively: <code>unicorn/filename-case</code> (kebabCase), <code>typescript/no-explicit-any</code>, <code>typescript/no-non-null-assertion</code>, <code>eslint/max-depth</code> (5), <code>eslint/no-else-return</code>, <code>import/no-self-import</code>, no-enum equivalent if native. Consult the pinned oxlint version's rule list (<code>bunx oxlint --rules</code>) — rule availability moves between versions; anything unavailable is left to the ESLint layer (do not force it).</li>
+                <li><code>@f0rbit/oxfmt-config</code>: ship <code>oxfmtrc.json</code> — tabs, print width 120, remaining options left at defaults. Verify the exact config filename/format against the pinned oxfmt version (<code>bunx oxfmt --help</code>); if the option names differ from Prettier's, follow oxfmt's.</li>
+                <li>Both packages: <code>package.json</code> with <code>"version": "0.1.0"</code>, <code>publishConfig.access: "public"</code>, no dependencies (the binaries are pinned in the umbrella package, added as devDependencies here for tests only).</li>
+                <li>Tests (bun test, real binaries over mocks): fixture-driven. oxlint: a fixture dir with a bad file (PascalCase filename, <code>any</code>, 6-deep nesting) and a clean file; run <code>Bun.spawn(["bunx", "oxlint", "-c", ...])</code> against fixtures and assert the bad file produces the expected rule IDs and the clean file produces zero diagnostics. oxfmt: a deliberately misformatted fixture; run oxfmt in check mode and assert non-zero exit; run on a canonically-formatted fixture and assert exit 0.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && bun test packages/oxlint-config packages/oxfmt-config</pre>
+              <p>Expected: all fixture tests pass — bad fixtures flagged with expected rule IDs, clean fixtures silent. (Run by the phase verification coder, not this task's coder.)</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>oxlint + oxfmt versions are EXACT pins (no <code>^</code>/<code>~</code>) in devDependencies.</li>
+                  <li>No rule listed in <code>oxlintrc.json</code> that the pinned oxlint version doesn't recognise (oxlint errors on unknown rules — the fixture test would catch it, but check deliberately).</li>
+                  <li><code>oxfmtrc.json</code> encodes tabs + width 120 — not silently left on space-2 defaults.</li>
+                  <li>Tests spawn the real binaries (no snapshotting of hand-written expected JSON only).</li>
+                  <li><code>files</code> arrays include the JSON artifacts so they actually publish.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-1-3">
+            <header>
+              <h3>Task 1.3: packages/eslint-config — the define_lint_config factory</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/eslint-config/{package.json,src/index.ts,src/presets.ts,README.md}</code>, <code>packages/eslint-config/tests/factory.test.ts</code>, <code>packages/eslint-config/tests/lint-behaviour.test.ts</code> + fixtures</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~320</dd>
+              <dt>Dependencies</dt>
+              <dd>task-1-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-1-2</dd>
+              <dt>Mode</dt>
+              <dd>coder (worktree; do NOT run build/lint/test verification — parallel agents active)</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Repo <code>/Users/tom/dev/lint</code>, bun workspace monorepo. This package is the <em>thin typed layer</em> of a two-layer model: oxlint (separate static-JSON package) owns the fast syntactic rules; this ESLint flat config carries ONLY what oxlint can't do — the typed rule family, functional discipline, naming-convention, import hygiene, no-commented-code — and is de-duplicated against oxlint LAST via <code>eslint-plugin-oxlint</code>. The ecosystem has two naming presets: corpus uses <strong>snake_case functions</strong> (e.g. <code>create_corpus</code>, <code>compute_hash</code>); scaffolded packages use <strong>camelCase functions</strong> with snake_case variables. Both use PascalCase types. Custom org rules (<code>@f0rbit/eslint-plugin</code>) land in a later phase — leave a clearly-marked insertion point in the factory but do not depend on the package yet.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Export <code>define_lint_config(options)</code> returning a flat-config array (<code>Linter.Config[]</code>). Options (Zod-validated, schema is the type source): <code>naming: "snake_case" | "camelCase"</code> (function-name preset), <code>package_name?: string</code> (enables an own-package-name import ban via <code>no-restricted-imports</code>), <code>tsconfig_root_dir: string</code>, <code>overrides?: Linter.Config[]</code> (spliced in before the oxlint de-dupe block).</li>
+                <li>Config layers, in order: (1) global ignores (<code>dist</code>, <code>node_modules</code>, <code>coverage</code>, <code>docs</code>, <code>.plans</code>); (2) typescript-eslint <code>strictTypeChecked</code>-derived typed family with <code>projectService: true</code> + <code>tsconfigRootDir</code> — including <code>no-floating-promises</code>, <code>no-unsafe-*</code>, <code>switch-exhaustiveness-check</code>, <code>prefer-readonly</code>, <code>consistent-type-assertions</code> (<code>objectLiteralTypeAssertions: "never"</code>), <code>consistent-type-imports</code>; (3) <code>eslint-plugin-functional</code>: <code>no-classes</code>, <code>no-this-expressions</code>, <code>no-throw-statements</code>, <code>no-try-statements</code> (repos allowlist via their own <code>files</code>-scoped overrides — the factory does not hardcode corpus specifics); (4) <code>@typescript-eslint/naming-convention</code> built from the preset: variables snake_case (+UPPER_CASE consts), functions per <code>naming</code> option, types PascalCase; (5) <code>eslint-plugin-import-x</code>: extensions <code>.js</code> for relative imports, <code>no-self-import</code>, plus the <code>package_name</code> ban when provided; (6) <code>eslint-plugin-sonarjs</code> <code>no-commented-code</code>; (7) caller <code>overrides</code>; (8) LAST: <code>eslint-plugin-oxlint</code>'s <code>buildFromOxlintConfigFile("./.oxlintrc.json")</code> so oxlint-owned rules are disabled here. Also set <code>linterOptions.reportUnusedDisableDirectives: "error"</code>.</li>
+                <li>Tests, two levels. <em>Factory tests</em>: call the factory with each preset and assert over the returned array (naming-convention selector for functions flips between presets; oxlint de-dupe block is last; overrides land before it; invalid options rejected by Zod). <em>Behaviour tests</em> (in-memory, no fixture repo where avoidable): use ESLint's programmatic API with in-memory text via <code>Linter</code>/<code>ESLint</code> against small fixture files in <code>tests/fixtures/</code> with a minimal <code>tsconfig.json</code> so <code>projectService</code> resolves — assert a class triggers <code>functional/no-classes</code>, a throw triggers <code>no-throw-statements</code>, <code>snake_case</code> preset accepts <code>create_thing()</code> and rejects <code>createThing()</code> (and vice versa for camelCase).</li>
+                <li>Dependencies: <code>eslint</code>, <code>typescript-eslint</code>, <code>eslint-plugin-functional</code>, <code>eslint-plugin-import-x</code>, <code>eslint-plugin-sonarjs</code>, <code>eslint-plugin-oxlint</code>, <code>zod</code> — all EXACT pins. <code>eslint-plugin-oxlint</code>'s version must match the oxlint version pinned in <code>packages/oxlint-config</code>/<code>packages/lint</code> (coordinate with the parallel task's pin at phase verification if needed).</li>
+                <li>Note: filename-case is NOT in this layer — oxlint owns it natively.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && bun test packages/eslint-config</pre>
+              <p>Expected: factory + behaviour tests pass; both naming presets exercised. (Run by the phase verification coder.)</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Zod schema is the single source of the options type (<code>z.infer</code>, no hand-written duplicate interface).</li>
+                  <li>oxlint de-dupe block is verifiably LAST — a test asserts ordering, not just presence.</li>
+                  <li>No <code>any</code> in the factory; the flat-config types from <code>eslint</code> are used, not <code>object[]</code>.</li>
+                  <li>Factory hardcodes no repo-specific allowlists (no "Semaphore", no "corpus" strings).</li>
+                  <li>Behaviour tests run typed rules through <code>projectService</code> — not just syntactic rules — proving type-aware linting actually works under bun.</li>
+                  <li>All plugin versions exactly pinned.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-1-4">
+            <header>
+              <h3>Task 1.4: packages/lint umbrella + f0rbit-lint bin + dogfood</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/lint/{package.json,src/index.ts,src/bin.ts,README.md}</code>, <code>packages/lint/tests/init.test.ts</code>, root <code>eslint.config.ts</code>, root <code>.oxlintrc.json</code>, root <code>.oxfmtrc.json</code>, root <code>package.json</code> (flip <code>verify</code> to full script), <code>.github/workflows/ci.yml</code> (enable full verify)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~200</dd>
+              <dt>Dependencies</dt>
+              <dd>task-1-2, task-1-3</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Repo <code>/Users/tom/dev/lint</code>. The four sibling packages exist: <code>@f0rbit/oxlint-config</code> (static <code>oxlintrc.json</code>), <code>@f0rbit/oxfmt-config</code> (static <code>oxfmtrc.json</code>), <code>@f0rbit/eslint-config</code> (<code>define_lint_config</code> factory). <code>@f0rbit/lint</code> is the umbrella: the ONLY package consumers install. It carries all tool binaries as exact-pinned regular dependencies (bun hoists their bins to <code>node_modules/.bin</code> transitively) and re-exports the factory. It also ships the <code>f0rbit-lint</code> bin with <code>init</code> (write consumer stubs) and <code>check</code> (detect drift of copied configs against the package's canonical copies). Consumer stub shapes: <code>.oxlintrc.json</code> = <code>{ "extends": ["./node_modules/@f0rbit/oxlint-config/oxlintrc.json"] }</code> (relative path — do not rely on node-specifier resolution in oxlint's extends); <code>.oxfmtrc.json</code> = byte-copy of the canonical file (unless the pinned oxfmt supports extends — check <code>--help</code>); <code>eslint.config.ts</code> = <code>define_lint_config({...})</code> call. Errors in the bin: this is a leaf CLI, keep it simple — print actionable message, non-zero exit; no Result plumbing required across module boundaries.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li><code>packages/lint/package.json</code>: name <code>@f0rbit/lint</code>, version 0.1.0, <code>bin: { "f0rbit-lint": "./src/bin.ts" }</code> (bun runs TS bins directly; if publishing requires JS, add a tiny build step and point bin at <code>dist/</code>), dependencies: the four workspace siblings (<code>workspace:*</code> locally — release workflow must rewrite to real versions; verify bun's publish behaviour for workspace protocol and pin accordingly) + EXACT pins for <code>oxlint</code>, <code>oxfmt</code>, <code>eslint</code>, <code>typescript-eslint</code>.</li>
+                <li><code>src/index.ts</code>: re-export <code>define_lint_config</code> (and the options type) so consumers can <code>import { define_lint_config } from "@f0rbit/lint"</code>.</li>
+                <li><code>src/bin.ts</code>: <code>init</code> — write the three stubs + merge <code>lint</code>/<code>lint:fix</code>/<code>fmt</code>/<code>fmt:check</code> scripts into the consumer's <code>package.json</code> (don't clobber existing scripts; print what changed). <code>check</code> — compare on-disk <code>.oxfmtrc.json</code> (and any other copied artifact) byte-wise against the canonical package copy; exit 1 with a diff hint on drift.</li>
+                <li>Dogfood: root <code>eslint.config.ts</code> calls <code>define_lint_config({ naming: "snake_case", tsconfig_root_dir: import.meta.dirname })</code>; root <code>.oxlintrc.json</code> extends the workspace package; root <code>.oxfmtrc.json</code> copied. Format the repo with oxfmt (the repo is brand new — no normalization/blame concerns). Fix any violations the self-lint surfaces. Flip root <code>verify</code> + CI to the full pipeline (typecheck, test, oxlint, eslint, fmt:check).</li>
+                <li>Tests for the bin: run <code>init</code> into a temp dir (<code>tests/.tmp/</code>) with a stub package.json, assert files written and scripts merged; corrupt <code>.oxfmtrc.json</code> and assert <code>check</code> exits non-zero.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && bun install && bun run verify</pre>
+              <p>Expected: typecheck, all package tests, oxlint, eslint (typed rules active), and fmt:check all pass on the repo itself — the toolchain gates its own repo.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li><code>oxlint</code>/<code>oxfmt</code>/<code>eslint</code>/<code>typescript-eslint</code> pins are exact and live ONLY here (not duplicated as regular deps in sibling packages — devDeps there are fine).</li>
+                  <li><code>f0rbit-lint init</code> is idempotent: running twice produces no changes the second time.</li>
+                  <li><code>init</code> does not overwrite an existing <code>eslint.config.ts</code> without a <code>--force</code> flag.</li>
+                  <li>Workspace-protocol deps confirmed to resolve to real versions on publish (check <code>bun publish</code> docs/behaviour; if not, release.yml rewrites them).</li>
+                  <li>Self-lint passes with zero inline <code>eslint-disable</code> comments in this repo's own source.</li>
+                  <li>Suggested commit title: <code>feat: umbrella package with init/check cli and self-linting</code> — no plan/task references.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-2">
+          <h3>Phase 2: Custom rule — must-use-result</h3>
+          <p>The marquee type-aware rule: a discarded <code>Result</code>-returning call is a silently swallowed error. Built in <code>packages/eslint-plugin</code>, tested with <code>@typescript-eslint/rule-tester</code>, wired into the factory, then the first npm release (v0.1.0) so phase 3 can consume from npm. The plugin package is structured for more rules later (<code>zod-at-edge</code> is the named next candidate, out of scope now).</p>
+
+          <article class="task" id="task-2-1">
+            <header>
+              <h3>Task 2.1: must-use-result rule + rule-tester suite</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/eslint-plugin/{package.json,src/index.ts,src/rules/must-use-result.ts}</code>, <code>packages/eslint-plugin/tests/must-use-result.test.ts</code>, <code>packages/eslint-plugin/tests/fixtures/</code> (tsconfig + result type decls)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~420 (rule ~150, tests ~250, scaffolding ~20)</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-1 complete</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>The corpus Result shape (from <code>/Users/tom/dev/corpus/types.ts:64-66</code>) is:</p>
+              <pre>export type Result&lt;T, E = CorpusError&gt; =
+  | { ok: true; value: T }
+  | { ok: false; error: E }</pre>
+              <p>The same structural shape is used by <code>@f0rbit/corpus</code> consumers across the ecosystem (pulse, vault, devpad). Detection MUST be structural (not name-based) so it matches corpus's local <code>Result</code>, <code>@f0rbit/corpus</code>'s re-export, and any structurally-identical local copy. Prior art to consult: <code>eslint-plugin-neverthrow</code>'s <code>must-use-result</code> and <code>@typescript-eslint/no-floating-promises</code> (statement-position analysis). Rule creation uses <code>ESLintUtils.RuleCreator</code> from <code>@typescript-eslint/utils</code>; type info via <code>ESLintUtils.getParserServices(context)</code> → TypeChecker. Plugin namespace is <code>f0rbit</code>; consumers see <code>f0rbit/must-use-result</code>.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li><strong>Detection algorithm.</strong> For each <code>ExpressionStatement</code> whose expression is a <code>CallExpression</code>, an <code>AwaitExpression</code> wrapping a call, or a <code>void</code>-operator expression wrapping either (flag <code>void</code> too — explicitly discarding an error still hides it; escape hatch is a described <code>eslint-disable</code> or a config override): get the expression's type from the checker; if Promise-like, unwrap via <code>checker.getAwaitedType</code>. Then <code>is_result_type(type)</code>: the type is a union where (a) every member has an <code>ok</code> property whose type is a boolean literal, (b) at least one member has <code>ok: true</code> AND a <code>value</code> property, and (c) at least one member has <code>ok: false</code> AND an <code>error</code> property. Unions distributed over generics (e.g. <code>Result&lt;T,E&gt; | undefined</code>) count if any constituent matches the full Result pattern after filtering nullish members. Report with messageId <code>discarded_result</code>: "Result returned by this call is discarded — assign, return, or handle it."</li>
+                <li><strong>Not flagged</strong> (valid positions): assignments, variable declarations, returns, arguments, array/object literals, arrow implicit returns, awaited-then-assigned, member access on the call result (e.g. <code>(await f()).ok</code> inside a condition), calls whose return type is not a structural Result.</li>
+                <li><strong>Package scaffolding:</strong> <code>src/index.ts</code> exports <code>{ meta: { name, version }, rules: { "must-use-result": rule } }</code>. Keep <code>src/rules/</code> one-file-per-rule for future rules. Dependencies: <code>@typescript-eslint/utils</code> exact-pinned; peer: <code>eslint</code>, <code>typescript</code>.</li>
+                <li><strong>Tests</strong> with <code>@typescript-eslint/rule-tester</code> under bun test. Known wiring gotcha: RuleTester needs the host framework hooks — set <code>RuleTester.afterAll = afterAll</code>, <code>RuleTester.describe = describe</code>, <code>RuleTester.it = it</code>, <code>RuleTester.itOnly = it.only</code> from <code>bun:test</code> before constructing. Typed fixtures via <code>parserOptions: { projectService: { allowDefaultProject: ["*.ts"] }, tsconfigRootDir: &lt;fixtures dir&gt; }</code>. Cases MUST include: bare discarded call (invalid); awaited discarded call (invalid); <code>void</code>-discarded (invalid); Promise&lt;Result&gt; discarded without await (invalid); assigned (valid); returned (valid); passed as arg (valid); non-Result call in statement position, e.g. <code>console.log()</code> (valid); a structurally-similar-but-not-Result union, e.g. <code>{ ok: boolean }</code> without value/error arms (valid); Result via generic alias instantiation (invalid when discarded).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && bun test packages/eslint-plugin</pre>
+              <p>Expected: full rule-tester suite passes — every invalid case reports exactly one <code>discarded_result</code> diagnostic; every valid case is silent.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Detection is structural — zero string-matching on the type alias name "Result".</li>
+                  <li>No <code>any</code> and no unchecked <code>as</code> casts in the rule beyond the parser-services boundary.</li>
+                  <li><code>Promise&lt;Result&gt;</code> discarded without <code>await</code> is caught (checker.getAwaitedType path actually exercised by a test).</li>
+                  <li>The near-miss union (<code>ok</code> boolean but no <code>value</code>/<code>error</code> arms) is a tested VALID case — no false positives on look-alikes.</li>
+                  <li>Rule metadata has <code>docs.description</code> and the messageId is used (no inline message strings).</li>
+                  <li>Plugin index is structured so adding a second rule touches only <code>src/rules/</code> + one line in the index.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-2-2">
+            <header>
+              <h3>Task 2.2: Wire plugin into factory, docs, publish v0.1.0</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/eslint-config/src/index.ts</code>, <code>packages/eslint-config/package.json</code>, <code>packages/eslint-config/tests/factory.test.ts</code>, <code>packages/lint/package.json</code>, <code>README.md</code>, <code>AGENTS.md</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~90</dd>
+              <dt>Dependencies</dt>
+              <dd>task-2-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Repo <code>/Users/tom/dev/lint</code>. <code>@f0rbit/eslint-plugin</code> now exists with <code>f0rbit/must-use-result</code>. The factory <code>define_lint_config</code> in <code>packages/eslint-config</code> has a marked insertion point for custom org rules (added in an earlier task). The umbrella <code>@f0rbit/lint</code> re-exports the factory and pins all tool versions. Release model: lockstep versions, tag <code>v0.1.0</code> triggers <code>.github/workflows/release.yml</code> which publishes all five packages with <code>NPM_TOKEN</code>. Phase 3 (corpus pilot) installs <code>@f0rbit/lint@0.1.0</code> from npm — this task's release unblocks it.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Add <code>@f0rbit/eslint-plugin</code> as a dependency of <code>@f0rbit/eslint-config</code>; register it in the factory under the <code>f0rbit</code> namespace with <code>f0rbit/must-use-result: "error"</code> at the marked insertion point (before caller overrides, before oxlint de-dupe).</li>
+                <li>Extend factory tests: returned config registers the plugin and enables the rule; a behaviour test lints a fixture discarding a Result and asserts the <code>f0rbit/must-use-result</code> diagnostic surfaces through the full factory config (not just the isolated rule).</li>
+                <li>Docs: README section for the rule (what it flags, examples, how to allow intentional discards); AGENTS.md entry: adding a new custom rule = <code>src/rules/&lt;name&gt;.ts</code> + index line + factory wiring + rule-tester suite.</li>
+                <li>Release: after the PR squash-merges, tag <code>v0.1.0</code> on main; confirm the release workflow publishes all five packages (this step is part of the phase close-out; the verification coder runs it).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && bun run verify
+# after tag push:
+bunx npm view @f0rbit/lint version</pre>
+              <p>Expected: full verify green (self-lint now includes must-use-result); npm shows <code>0.1.0</code> for <code>@f0rbit/lint</code> (and the four siblings).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>The rule is enabled through the factory for BOTH naming presets (not accidentally preset-gated).</li>
+                  <li>Behaviour test goes through <code>define_lint_config</code> output, not a hand-built config.</li>
+                  <li>Published tarballs contain compiled/runnable entry points (spot-check <code>bunx npm view @f0rbit/eslint-plugin files</code> or pack locally) — a TS-only main that ESLint can't load would break every consumer.</li>
+                  <li>Tag name is plain <code>v0.1.0</code>; release commit title contains no plan/task references.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-3">
+          <h3>Phase 3: Pilot on corpus</h3>
+          <p>Corpus is the pilot: richest conventions (snake_case functions, documented intentional throws, one intentional class), and the repo whose AGENTS.md currently says "there is no separate lint step" and "match the file you're editing". Sequence matters: wiring PR → normalization PR (isolated, exactly one squashed formatting commit) → fixes + ignore-revs + CI-gate PR. Tasks 3.3 and 3.4 may share one PR. All work happens in <code>/Users/tom/dev/corpus</code> on branches off main; corpus currently has an in-flight feature branch — do not touch it.</p>
+
+          <article class="task" id="task-3-1">
+            <header>
+              <h3>Task 3.1: Wire @f0rbit/lint into corpus (no fixes yet)</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/corpus/package.json</code>, <code>~/dev/corpus/eslint.config.ts</code>, <code>~/dev/corpus/.oxlintrc.json</code>, <code>~/dev/corpus/.oxfmtrc.json</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~80</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-2 complete (v0.1.0 on npm)</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Corpus (<code>/Users/tom/dev/corpus</code>) is a single-package library (not a monorepo), bun runtime, <code>bun test</code> + <code>bun run typecheck</code> as current gates. Conventions: snake_case functions (<code>create_corpus</code>), PascalCase types, kebab-case test/doc filenames, flat source files at root. Documented intentional exceptions that MUST become <code>files</code>-scoped overrides (not inline disables): <code>concurrency.ts</code> — the <code>Semaphore</code> class (intentional, owns mutable state); <code>corpus.ts</code> — <code>create_corpus().build()</code> throws (the one intentional throw, config-time guard); <code>testing/</code> — arbitrary-construction errors throw with actionable messages (documented design); <code>tests/</code> + <code>docs/</code> — relaxed (test code may throw; docs is an Astro workspace, exclude it from typed linting). <code>@f0rbit/lint</code> provides: umbrella install (all binaries), <code>define_lint_config</code> factory, <code>f0rbit-lint init</code> for stubs. Corpus is zod v3 — no conflict, the config package's zod is its own dependency.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li><code>bun add -d -E @f0rbit/lint@0.1.0</code>. Run <code>bunx f0rbit-lint init</code>; adjust the generated <code>eslint.config.ts</code>: <code>define_lint_config({ naming: "snake_case", package_name: "@f0rbit/corpus", tsconfig_root_dir: import.meta.dirname, overrides: [...] })</code> with overrides: <code>concurrency.ts</code> → <code>functional/no-classes</code> + <code>no-this-expressions</code> off; <code>corpus.ts</code> → <code>functional/no-throw-statements</code> off; <code>testing/**</code> → no-throw off; <code>tests/**</code> → functional rules + <code>must-use-result</code> relaxed as needed; global ignores: <code>docs/**</code>, <code>dist/**</code>, <code>.plans/**</code>, <code>tests/fixtures/**/node_modules/**</code> (git-tracked fixture trees — must NOT be linted or formatted, they are walker-test fixtures).</li>
+                <li>Scripts: <code>"lint": "oxlint . &amp;&amp; eslint ."</code>, <code>"lint:fix": "oxlint --fix . &amp;&amp; eslint --fix ."</code>, <code>"fmt": "oxfmt ."</code> (excluding fixture trees — configure oxfmt ignores), <code>"fmt:check"</code>.</li>
+                <li>Flip corpus repo merge settings to squash-only via <code>gh api</code> (new ecosystem workflow rule; currently merge-commits-only). Note it in the PR body.</li>
+                <li>Do NOT fix violations and do NOT add CI gating in this PR — <code>bun lint</code> is expected to fail locally after this lands; record the violation count in the PR body as the phase's baseline.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/corpus && bun run lint 2>&1 | tail -5; bun test && bun run typecheck</pre>
+              <p>Expected: lint runs end-to-end and reports violations (non-zero exit is EXPECTED — record the count); tests + typecheck still green; <code>gh api repos/f0rbit/corpus | jq .allow_squash_merge</code> → true.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>All exceptions are config-scoped <code>files</code> overrides — zero inline <code>eslint-disable</code> added.</li>
+                  <li><code>tests/fixtures/**/node_modules/</code> is ignored by ALL THREE tools (oxlint, eslint, oxfmt) — formatting those trees would break the vending-walker tests.</li>
+                  <li><code>docs/</code> (Astro workspace) excluded from typed linting — <code>projectService</code> would choke on .astro files.</li>
+                  <li>Dependency pin is exact (<code>@f0rbit/lint@0.1.0</code>, no caret).</li>
+                  <li>No source files modified in this PR (wiring only — diff limited to configs + package.json + lockfile).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-3-2">
+            <header>
+              <h3>Task 3.2: oxfmt normalization commit (isolated PR)</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd>every TS/JS/JSON source file in <code>~/dev/corpus</code> except ignored paths (mechanical reformat)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>0 authored (large mechanical diff)</dd>
+              <dt>Dependencies</dt>
+              <dd>task-3-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Corpus has documented mixed indentation ("match the file you're editing" — tabs in <code>result.ts</code>/<code>backend/*</code>/<code>observations/*</code>/<code>testing/*</code>, 2-space in <code>types.ts</code>/<code>corpus.ts</code>, mixed <code>utils.ts</code>). oxfmt (configured in 3.1: tabs, width 120) now owns formatting. Because corpus squash-merges (flipped in 3.1), this PR must contain ONLY formatting — the squashed commit on main becomes the <code>.git-blame-ignore-revs</code> entry recorded in the NEXT PR. Mixing anything else into this PR permanently pollutes blame.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Branch from main (with 3.1 merged). Run <code>bun run fmt</code>. Commit ALL resulting changes as a single commit. Title: <code>style: normalize formatting with oxfmt</code>. Nothing else in the diff — no config tweaks, no manual edits.</li>
+                <li>Sanity-check the mechanical diff cannot change behaviour: <code>bun test &amp;&amp; bun run typecheck</code> after formatting.</li>
+                <li>Verify ignored paths (<code>tests/fixtures/**/node_modules/</code>, <code>docs/</code> content pages if excluded, <code>.plans/</code>) are untouched: <code>git status --porcelain</code> filtered against the ignore list.</li>
+                <li>PR body: note this SHA (post-squash) will be added to <code>.git-blame-ignore-revs</code> in the follow-up PR.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/corpus && bun run fmt:check && bun test && bun run typecheck
+git diff main --stat | tail -1</pre>
+              <p>Expected: fmt:check exits 0 (idempotent), tests + typecheck green, diff is format-only (spot-check 2–3 files show whitespace/quote churn only, zero semantic edits).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Exactly one commit in the PR; diff contains formatting changes ONLY.</li>
+                  <li><code>git ls-files | grep node_modules</code> output unchanged from before the reformat (fixture trees untouched).</li>
+                  <li><code>bun test</code> passes AFTER formatting — proves no behavioural change (template literals, regexes not mangled).</li>
+                  <li>JSDoc <code>@example</code> blocks survive (corpus docs/llms.txt extract from them — spot-check <code>types.ts</code> examples still intact).</li>
+                  <li>No <code>.git-blame-ignore-revs</code> file in THIS PR (it can't reference a SHA that doesn't exist yet).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-3-3">
+            <header>
+              <h3>Task 3.3: Fix/annotate lint violations + .git-blame-ignore-revs</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/corpus/.git-blame-ignore-revs</code> (new), <code>eslint.config.ts</code> (override refinement), assorted source files (violation fixes)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~150–300 (unknown until baseline from 3.1)</dd>
+              <dt>Dependencies</dt>
+              <dd>task-3-2 (merged; its main SHA known)</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-3-4 (may share a PR)</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Corpus now has the lint toolchain wired (factory config with overrides for <code>Semaphore</code>/<code>build()</code>/<code>testing/</code>) and a normalization commit on main. Remaining violations are real findings: expect typed-family hits (<code>no-floating-promises</code> on fire-and-forget test helpers, <code>switch-exhaustiveness</code>, unsafe-any at Zod/Drizzle boundaries), functional-rule hits outside the known allowlists, naming or import-extension misses, and possibly <code>must-use-result</code> hits in tests. Policy: fix what is mechanically or locally fixable; for rules needing non-mechanical refactors, downgrade THAT rule to <code>warn</code> via override with a graduation entry appended to the plan's out-of-scope section; never ship a permanently-warn rule. New intentional exceptions discovered during fixing go in config overrides with a comment, not inline disables.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Create <code>.git-blame-ignore-revs</code> containing the squashed main SHA of the normalization PR (with a comment line naming it). Add a note to AGENTS.md bootstrap: <code>git config blame.ignoreRevsFile .git-blame-ignore-revs</code>.</li>
+                <li>Run <code>bun run lint</code>; triage every finding: fix, or config-override with justification, or warn-downgrade with graduation note. Target: <code>bun run lint</code> exits 0.</li>
+                <li>Re-run <code>bun test</code> + <code>bun run typecheck</code> after each batch of fixes — lint fixes must not change behaviour.</li>
+                <li>Record in the PR body: count fixed / overridden / warn-downgraded.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/corpus && bun run lint && bun run fmt:check && bun test && bun run typecheck</pre>
+              <p>Expected: all four green. <code>git blame types.ts</code> attributes lines to pre-normalization commits (ignore-revs working locally).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Zero new inline <code>eslint-disable</code> without a description; run with <code>--report-unused-disable-directives</code>.</li>
+                  <li>No fix weakened types (no new <code>any</code>, no new <code>as</code> casts to silence unsafe-* rules).</li>
+                  <li>Every warn-downgrade has a matching graduation entry (check plan out-of-scope / corpus TODO).</li>
+                  <li>The ignore-revs SHA is the post-squash main SHA (verify <code>git branch --contains &lt;sha&gt;</code> includes main), not the pre-squash branch SHA.</li>
+                  <li>Public API untouched — <code>index.ts</code> barrel exports identical before/after.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-3-4">
+            <header>
+              <h3>Task 3.4: CI lint gate + corpus AGENTS.md rewrite</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/corpus/.github/workflows/*</code> (existing CI workflow), <code>~/dev/corpus/AGENTS.md</code></dd>
+              <dt>Estimated LOC</dt>
+              <dd>~60</dd>
+              <dt>Dependencies</dt>
+              <dd>task-3-3</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-3-3 (may share a PR)</dd>
+              <dt>Mode</dt>
+              <dd>verification</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Corpus lint + fmt now pass locally. Its AGENTS.md contains three statements that are now false: "There is no separate lint step — typecheck + tests are the gate" (Scripts section), "Indentation is mixed across the repo — match the file you're editing" (Style section), and "PRs on this repo merge with merge commits only" (Scripts section — flipped to squash in 3.1). This task makes CI the enforcement point and AGENTS.md truthful.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Add to corpus CI (existing workflow): a lint step after typecheck/tests — <code>bun run lint &amp;&amp; bun run fmt:check</code>. If corpus CI job names feed branch protection, keep the job name stable.</li>
+                <li>AGENTS.md updates: Scripts — add <code>bun run lint</code> / <code>bun run fmt</code> / <code>bun run fmt:check</code>, replace the "no lint step" sentence with the lint gate description; state squash-merge-only. Style — replace the mixed-indentation rule with "oxfmt owns formatting (tabs, width 120, config from <code>@f0rbit/lint</code>) — run <code>bun run fmt</code>; never hand-align". Conventions — new subsection documenting: the two-layer lint model, the config-scoped exception overrides (Semaphore / build() / testing/ / tests/) and the rule that new exceptions go in config not inline, <code>must-use-result</code> being active, and <code>blame.ignoreRevsFile</code> setup.</li>
+                <li>Move conventions now machine-enforced OUT of prose where they are duplicated (naming case rules etc. can shrink to a pointer at the lint config).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/corpus && bun run lint && bun run fmt:check && bun test && bun run typecheck
+gh pr checks --watch</pre>
+              <p>Expected: local gates green; the PR's CI run shows the lint step executing and passing.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>All three false AGENTS.md statements corrected (lint gate, indentation, merge method) — grep for "match the file" and "merge commits only" returns nothing.</li>
+                  <li>CI lint step runs oxlint before eslint (fail-fast order) and fmt in CHECK mode (never <code>--fix</code>/write in CI).</li>
+                  <li>Branch-protection required checks still match the CI job names after the edit.</li>
+                  <li>AGENTS.md doesn't delete still-unenforceable conventions (JSDoc style, comment policy stay as prose).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-4">
+          <h3>Phase 4: Scaffolder integration</h3>
+          <p>New packages created by <code>devpad pipelines init</code> must get lint/format wiring from day one — the scaffolder template calls the same <code>f0rbit-lint init</code> path manual adoption uses, so there is one code path to maintain. Template changes do NOT auto-propagate to already-scaffolded packages (known hand-sync limitation, unchanged).</p>
+
+          <article class="task" id="task-4-1">
+            <header>
+              <h3>Task 4.1: Add lint/format wiring to the pipelines scaffolder template</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/devpad/packages/pipeline-templates/src/scaffolder/templates/</code> (package.json template, deploy.yml template, new config stubs, AGENTS.md template)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~120</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-3 complete</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>The devpad pipelines scaffolder (<code>bunx devpad pipelines init &lt;name&gt;</code>) generates a complete bun project from templates at <code>~/dev/devpad/packages/pipeline-templates/src/scaffolder/templates/</code> (structure: <code>.github/workflows/deploy.yml</code>, <code>infra.ts</code>, <code>wrangler.jsonc</code>, <code>pipeline.ts</code>, <code>grants.ts</code>, <code>src/</code>, <code>AGENTS.md</code>, <code>package.json</code>). Scaffolded packages use the camelCase-functions naming preset (pipelines-setup conventions: snake_case vars, camelCase functions, PascalCase types, tabs). <code>@f0rbit/lint</code> (npm, exact pin) provides the umbrella install; <code>define_lint_config({ naming: "camelCase", ... })</code> is the factory call; consumer stubs are <code>.oxlintrc.json</code> (extends via <code>./node_modules/...</code> relative path), <code>.oxfmtrc.json</code> (canonical copy), <code>eslint.config.ts</code>. Scaffolded CI uses Node 22 + bun; workers code has Cloudflare-specific types (workers-types) — the tsconfig the template ships must keep <code>projectService</code> working.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Template <code>package.json</code>: add <code>@f0rbit/lint</code> (exact pin, devDependency) + scripts <code>lint</code>, <code>lint:fix</code>, <code>fmt</code>, <code>fmt:check</code> (same shapes as corpus).</li>
+                <li>Add template stubs: <code>eslint.config.ts</code> with <code>define_lint_config({ naming: "camelCase", package_name: "{{name}}", tsconfig_root_dir: import.meta.dirname, overrides: [] })</code>; <code>.oxlintrc.json</code> extends stub; <code>.oxfmtrc.json</code> canonical copy. Prefer generating these by invoking <code>f0rbit-lint init</code> during scaffold if the scaffolder architecture allows post-install hooks; otherwise embed the stub contents in templates AND add a template-repo test that byte-compares embedded stubs against <code>f0rbit-lint init</code> output so they can't drift.</li>
+                <li>Template <code>deploy.yml</code>: add <code>bun run lint &amp;&amp; bun run fmt:check</code> to the verify steps before build/upload.</li>
+                <li>Template <code>AGENTS.md</code>: lint/format section (two-layer model pointer, "oxfmt owns formatting", exceptions-go-in-config rule).</li>
+                <li>Follow the devpad repo's existing conventions for template changes (check how previous template edits were tested; pipeline-templates may have its own test suite — extend it).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/devpad && bun test packages/pipeline-templates</pre>
+              <p>Expected: template test suite green, including the new stub-drift test if embedded stubs were used.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li><code>@f0rbit/lint</code> pin in the template is exact and matches the version corpus pilots (one ecosystem version).</li>
+                  <li>Naming preset is camelCase (scaffolded convention), NOT corpus's snake_case.</li>
+                  <li>Template stubs cannot silently drift from <code>f0rbit-lint init</code> output (hook or drift test — one of the two exists).</li>
+                  <li>deploy.yml lint step ordered before artifact build (fail fast, don't upload unlinted bundles).</li>
+                  <li>No npm/npx introduced into templates.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-4-2">
+            <header>
+              <h3>Task 4.2: End-to-end scaffold smoke test + devpad AGENTS.md</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd>throwaway scaffold in a temp dir (not committed), <code>~/dev/devpad/AGENTS.md</code> (or the pipelines package AGENTS.md — wherever scaffolder docs live)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~30</dd>
+              <dt>Dependencies</dt>
+              <dd>task-4-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>verification</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>The scaffolder templates now include lint/format wiring. Prove the full loop before rollout: a freshly scaffolded package must pass its own lint + fmt gates out of the box — a scaffold that starts life red would teach agents to ignore the gate. The scaffolder is invoked as <code>bunx devpad pipelines init &lt;name&gt;</code> and writes to <code>~/dev/&lt;name&gt;</code>; for a smoke test, prefer whatever dry-run/target-dir mechanism the scaffolder offers (check its CLI flags) or scaffold into a temp name and delete afterwards (do NOT register grants or deploy anything — no pipeline run, no infra).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Scaffold a throwaway package (e.g. <code>lint-smoke</code>) into a temp location. Run <code>bun install &amp;&amp; bun run lint &amp;&amp; bun run fmt:check &amp;&amp; bun run typecheck</code> inside it. All must pass on the untouched scaffold.</li>
+                <li>Introduce a deliberate violation (a discarded Result-returning call in <code>src/</code>) and confirm <code>bun run lint</code> fails with <code>f0rbit/must-use-result</code> — proves the typed layer works in a scaffolded Workers-typed project, not just in corpus.</li>
+                <li>Delete the throwaway. Update the devpad-side AGENTS.md (wherever scaffolder behaviour is documented) noting scaffolded packages ship lint/format wiring and the hand-sync rule for pre-existing packages.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd &lt;tempdir&gt;/lint-smoke && bun install && bun run lint && bun run fmt:check && bun run typecheck</pre>
+              <p>Expected: all green on the pristine scaffold; the deliberate-violation check fails with exactly the expected rule ID; temp dir removed afterwards.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Smoke test used the REAL scaffolder CLI path, not a hand-copied template render.</li>
+                  <li>The typed rule fired inside the scaffold (proves projectService works with workers-types tsconfig).</li>
+                  <li>No grants declared, no deploy triggered, no <code>~/dev/lint-smoke</code> left behind.</li>
+                  <li>Findings that reveal template bugs went back into task-4-1's files, not local scaffold patches.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-5">
+          <h3>Phase 5: Rollout — vault, pulse, ui, devpad</h3>
+          <p>Repeatable per-repo recipe, proven on corpus: <strong>(a)</strong> wiring PR (deps + configs + scripts + repo-specific overrides + squash-only settings; record violation baseline), <strong>(b)</strong> normalization PR (formatting only, one squashed commit), <strong>(c)</strong> fixes + <code>.git-blame-ignore-revs</code> + CI gate + AGENTS.md PR. Each task below is one repo running the whole recipe. The four repos are independent — tasks run in parallel (separate repos, no worktrees needed), each as a sequential 3-PR flow shepherded to merge. Suggested order if serialised: vault (smallest) → pulse → ui → devpad (largest, most learnings applied). Naming preset per repo: determine by reading the code — scaffolded-style repos (vault, pulse) are camelCase functions; ui and devpad must be inspected before choosing; when mixed, pick the majority case and warn-downgrade naming-convention with a graduation note rather than mass-renaming exports (renames of published API are BREAKING and out of scope).</p>
+
+          <article class="task" id="task-5-1">
+            <header>
+              <h3>Task 5.1: Rollout to vault</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/vault</code>: <code>package.json</code>, <code>eslint.config.ts</code>, <code>.oxlintrc.json</code>, <code>.oxfmtrc.json</code>, <code>.git-blame-ignore-revs</code>, CI workflow, <code>AGENTS.md</code>, source fixes, full-tree reformat</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~150 authored + mechanical reformat</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-4 complete</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-5-2, task-5-3, task-5-4</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>vault (<code>~/dev/vault</code>) is the upstream-API-key broker Worker — separate repo, security boundary, RPC-only, small codebase. Scaffolded-style conventions (camelCase functions expected — verify by reading <code>src/</code>). Uses <code>@f0rbit/corpus</code> Result types — <code>must-use-result</code> will bite on any fire-and-forget pulse-emit calls; those are legitimate fire-and-forget: handle via explicit local handling or a config override for the emitter module with a comment, NOT by weakening the rule globally. Recipe and gotchas identical to the corpus pilot (see phase-5 intro): 3 PRs, normalization isolated, ignore-revs records the post-squash SHA, CI gains <code>bun run lint &amp;&amp; bun run fmt:check</code>, AGENTS.md gains the lint/format section, repo flips to squash-only if not already.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>PR a: <code>bun add -d -E @f0rbit/lint@&lt;pinned&gt;</code>, <code>bunx f0rbit-lint init</code>, factory call with the verified naming preset + <code>package_name</code>, repo-specific overrides, squash-only via <code>gh api</code>. Record baseline violations in PR body.</li>
+                <li>PR b: <code>bun run fmt</code>, single formatting-only commit, title <code>style: normalize formatting with oxfmt</code>. Tests + typecheck green after.</li>
+                <li>PR c: <code>.git-blame-ignore-revs</code> with PR b's main SHA; fix/annotate violations to lint-green (config-scoped exceptions, warn-downgrades get graduation notes); CI lint+fmt gate; AGENTS.md lint/format section.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/vault && bun run lint && bun run fmt:check && bun test && bun run typecheck</pre>
+              <p>Expected: all green; CI on PR c shows the lint step passing; blame on a core file attributes to pre-normalization commits.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Normalization PR is formatting-only (one commit, zero semantic edits).</li>
+                  <li>No secrets/config files reformatted in ways that change semantics (<code>wrangler.jsonc</code> comments preserved — JSONC-aware formatting only, or excluded).</li>
+                  <li>Fire-and-forget pulse emits resolved deliberately (handled or narrowly overridden with comment), not blanket-disabled.</li>
+                  <li>No new <code>any</code>/<code>as</code> introduced by fixes; vault's zero-trust identity code untouched semantically.</li>
+                  <li>Commit/PR titles free of plan/task references.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-5-2">
+            <header>
+              <h3>Task 5.2: Rollout to pulse</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/pulse</code>: same file set as task-5-1's recipe</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~150 authored + mechanical reformat</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-4 complete</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-5-1, task-5-3, task-5-4</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>pulse (<code>~/dev/pulse</code>) is the observability ingest/query Worker (<code>pulse-api</code> in production — deployed via Alchemy; NOTHING in this rollout may rename the worker or touch <code>infra.ts</code> semantics; other workers depend on the exact name <code>pulse-api</code> via service bindings). CI note from memory: pin Bun to 1.3.13 in CI (1.3.14 segfaults) — when editing pulse CI, preserve that pin. Conventions scaffolded-style (verify naming preset by reading <code>src/</code>). Same 3-PR recipe as the corpus pilot (see phase-5 intro).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Run the standard recipe (PRs a/b/c per task-5-1's steps) against <code>~/dev/pulse</code>.</li>
+                <li>Repo-specific care: exclude <code>infra.ts</code> from any override churn beyond formatting; if D1/Drizzle boundary code trips unsafe-* rules, fix with Zod parses at the edge, not casts.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/pulse && bun run lint && bun run fmt:check && bun test && bun run typecheck</pre>
+              <p>Expected: all green; CI (with Bun 1.3.13 pin intact) passes the new lint step.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Bun 1.3.13 CI pin preserved after workflow edits.</li>
+                  <li><code>infra.ts</code> semantically untouched (formatting only) — worker name <code>pulse-api</code> appears in zero diffs beyond whitespace.</li>
+                  <li>Normalization PR formatting-only; ignore-revs SHA is the post-squash main SHA.</li>
+                  <li>Unsafe-* fixes use Zod validation at boundaries, not <code>as</code> casts.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-5-3">
+            <header>
+              <h3>Task 5.3: Rollout to ui</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/ui</code>: same file set as the recipe</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~180 authored + mechanical reformat</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-4 complete</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-5-1, task-5-2, task-5-4</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>ui (<code>~/dev/ui</code>) is the published component library <code>@f0rbit/ui</code> (primitives: Row, Stack, Grid, Badge, Stat, Button, Empty, Modal, Stepper) with a docs site at <code>f0rbit.github.io/ui</code>. It likely contains JSX/TSX and framework-specific files — confirm oxfmt's JSX support status on the pinned version before normalizing; if any file class is unsupported, exclude it from fmt (tracked as out-of-scope follow-up) rather than blocking the rollout. Component libraries often legitimately use camelCase functions + PascalCase components; verify the naming preset by reading <code>src/</code>. This is a PUBLISHED library: renaming any export to satisfy naming-convention is BREAKING and forbidden here — warn-downgrade naming for existing exports if needed, with a graduation note. Same 3-PR recipe (see phase-5 intro).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Run the standard recipe (PRs a/b/c) against <code>~/dev/ui</code>.</li>
+                <li>Repo-specific: check docs-site build (<code>llms.txt</code> generation, if analogous to corpus) still passes after normalization; exclude generated/docs-output dirs from all three tools.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/ui && bun run lint && bun run fmt:check && bun test && bun run typecheck && bun run build</pre>
+              <p>Expected: all green including the library build; published API surface unchanged (diff <code>dist</code> exports or the package's public d.ts before/after).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Zero export renames (public API identical — this is a published library).</li>
+                  <li>JSX/TSX files either cleanly formatted by the pinned oxfmt or explicitly excluded with a follow-up note — no half-formatted files.</li>
+                  <li>Docs site builds after normalization.</li>
+                  <li>Normalization PR formatting-only; ignore-revs SHA correct.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-5-4">
+            <header>
+              <h3>Task 5.4: Rollout to devpad</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/devpad</code> (monorepo): root configs + per-workspace wiring, CI, AGENTS.md, source fixes, full-tree reformat</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~250 authored + mechanical reformat (largest repo)</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-4 complete (and benefits from 5.1–5.3 learnings if serialised)</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-5-1, task-5-2, task-5-3</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>devpad (<code>~/dev/devpad</code>) is the largest repo: a bun-workspaces monorepo (<code>packages/pipelines</code>, <code>packages/pipeline-templates</code>, <code>packages/cli</code>, <code>packages/api</code>, <code>apps/main</code> with Astro pages). One root <code>eslint.config.ts</code> with <code>projectService</code> covers the workspace; Astro files are excluded from typed linting (same approach as corpus's docs/ exclusion) — lint TS/TSX only unless the pinned toolchain handles <code>.astro</code> cleanly. The phase-4 template changes live here — do not reformat <code>packages/pipeline-templates/src/scaffolder/templates/</code> template files if formatting would alter scaffold output (exclude templates dir from fmt; scaffold output formatting is owned by the template contents themselves, already wired in phase 4). Known phantom-dep gotcha: <code>@devpad/api</code> declares <code>drizzle-orm</code> explicitly because its compiled dist inlines schema imports — no fix may remove it. Same 3-PR recipe (see phase-5 intro); expect the biggest violation count — budget the warn-downgrade + graduation mechanism liberally rather than boiling the ocean in one PR.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Run the standard recipe (PRs a/b/c) at the devpad root: single root config, workspace-wide scripts, per-package overrides only where genuinely needed.</li>
+                <li>Repo-specific: exclude <code>scaffolder/templates/</code> from oxfmt (template output fidelity); exclude <code>.astro</code> from the typed layer; verify the devpad CLI (<code>packages/cli</code>) still runs post-normalization (<code>bun packages/cli/src/index.ts --help</code>).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/devpad && bun run lint && bun run fmt:check && bun test && bun run typecheck</pre>
+              <p>Expected: all green across the workspace; scaffolder template files byte-identical to pre-rollout (excluded from fmt); CLI smoke passes.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li><code>scaffolder/templates/</code> untouched by the normalization commit (byte-compare).</li>
+                  <li><code>drizzle-orm</code> still in <code>@devpad/api</code> dependencies.</li>
+                  <li>Astro pages excluded from typed linting — no <code>projectService</code> errors on <code>.astro</code>.</li>
+                  <li>Warn-downgrades all carry graduation notes; none silently permanent.</li>
+                  <li>Normalization PR formatting-only; ignore-revs SHA correct.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+      </section>
+
+      <section id="breaking">
+        <h2>Breaking changes</h2>
+        <ul>
+          <li><strong>BREAKING (workflow):</strong> every repo gains a required CI lint+fmt gate — previously-green branches will fail CI until rebased onto the normalization + fix commits.</li>
+          <li><strong>BREAKING (workflow):</strong> corpus's merge method flips from merge-commits-only to squash-only (phase 3); its AGENTS.md statement and the orchestrator's memory note about merge-commits-only become stale and are updated.</li>
+          <li><strong>BREAKING (convention):</strong> corpus's "match the file you're editing" indentation rule is deleted — oxfmt owns formatting (tabs, width 120) everywhere. Blame churn from normalization commits is mitigated by <code>.git-blame-ignore-revs</code>.</li>
+          <li>No runtime or public-API breaking changes anywhere: export renames to satisfy naming rules are explicitly forbidden in this plan (warn-downgrade + graduation instead).</li>
+        </ul>
+      </section>
+
+      <section id="out-of-scope">
+        <h2>Out of scope</h2>
+        <ul>
+          <li><strong>Zod-at-edge custom rule</strong> (no-unvalidated-<code>JSON.parse</code>/fetch) — next rule in <code>@f0rbit/eslint-plugin</code> after must-use-result proves the pipeline.</li>
+          <li><strong>Non-JS/TS language configs</strong> (rustfmt, etc.) — the <code>packages/&lt;tool&gt;-config</code> convention reserves the space; nothing ships now.</li>
+          <li><strong>Editor integration distribution</strong> (VS Code settings for oxfmt format-on-save / oxlint extension) — per-machine, not per-repo; revisit after rollout.</li>
+          <li><strong>Renovate/dependabot automation</strong> for the pinned oxlint/oxfmt versions — manual bumps in the umbrella package for now (alpha churn makes auto-bumps risky).</li>
+          <li><strong>oxlint typed rules (tsgolint) migration</strong> — revisit when tsgolint exits alpha; rules then migrate from the ESLint layer config-by-config.</li>
+          <li><strong>Auto-syncing scaffolder template changes</strong> into already-scaffolded packages — existing hand-sync limitation, unchanged.</li>
+          <li><strong>Comment-density enforcement</strong> — not machine-checkable; stays in review.</li>
+          <li><strong>Naming-convention graduation items</strong> from warn-downgrades in phases 3/5 — appended here by the executing coders as they arise, with repo + rule + reason.</li>
+          <li><strong>devpad task mirroring for this plan</strong> — devpad MCP tools unavailable at planning time; create the project/tasks when a session has them and back-fill IDs here.</li>
+          <li><strong>corpus file-backend data-key aliasing fix</strong> and other pre-existing corpus backlog items — unrelated, remain in the corpus testing-substrate plan's out-of-scope.</li>
+        </ul>
+      </section>
+
+      <section id="agents-md-updates">
+        <h2>AGENTS.md updates</h2>
+        <p>Audit trail — the verification coder of each phase writes these into the named repo's <code>AGENTS.md</code> directly.</p>
+        <ul>
+          <li><strong>lint repo (phase 1 seed, phase 2 additions):</strong> repo purpose + two-layer model; umbrella-install pattern (consumers depend only on <code>@f0rbit/lint</code>; all tool version pins live in <code>packages/lint/package.json</code> ONLY); the de-dupe regeneration rule (bump <code>eslint-plugin-oxlint</code> with <code>oxlint</code> in the same commit — its versions track oxlint's ruleset); factory contract (<code>define_lint_config({ naming, package_name, tsconfig_root_dir, overrides })</code>, two naming presets, oxlint de-dupe LAST); custom-rule recipe (rules/ file + index line + factory wiring + rule-tester suite; RuleTester needs bun:test hooks assigned: <code>RuleTester.afterAll = afterAll</code> etc.); commit-title hygiene rule (no phase/task/plan references in titles; squash-merge only); lockstep versioning + tag-triggered publish.</li>
+          <li><strong>corpus (phase 3):</strong> replace "no separate lint step" with the lint gate (<code>bun run lint</code>, <code>bun run fmt:check</code> in CI); replace mixed-indentation rule with "oxfmt owns formatting (tabs, 120) — <code>bun run fmt</code>"; replace "merge commits only" with squash-only; document config-scoped exception overrides (Semaphore / <code>build()</code> / <code>testing/</code> / <code>tests/</code>) and the exceptions-go-in-config rule; note <code>blame.ignoreRevsFile</code> setup; note <code>tests/fixtures/**/node_modules/</code> is excluded from all three tools (walker fixtures).</li>
+          <li><strong>devpad (phase 4 + 5):</strong> scaffolded packages ship lint/format wiring (camelCase preset) — template changes hand-sync to existing packages; <code>scaffolder/templates/</code> is excluded from repo-level oxfmt (template output fidelity); root lint config covers the workspace, Astro excluded from typed layer.</li>
+          <li><strong>vault / pulse / ui (phase 5):</strong> per-repo lint/format section — gate commands, naming preset chosen (with evidence), repo-specific overrides and why (vault: pulse-emitter fire-and-forget handling; pulse: infra.ts formatting-only + Bun 1.3.13 CI pin; ui: any oxfmt JSX exclusions + no-export-renames rule).</li>
+          <li><strong>Orchestrator memory (not AGENTS.md):</strong> the "corpus repo is merge-commits-only" memory note becomes stale after phase 3 — update <code>~/.claude/projects/-Users-tom-dev-corpus/memory/gh-pr-merge-authorized.md</code> when the flip lands.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
