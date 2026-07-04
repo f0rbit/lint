@@ -45,6 +45,20 @@ describe("f0rbit-lint init", () => {
 		expect(manifest.scripts["fmt:check"]).toBe("oxfmt --check .");
 	});
 
+	it("writes stubs that already pass fmt:check", async () => {
+		const dir = make_consumer("init-oxfmt-clean");
+		await run_bin(dir, ["init"]);
+		const proc = Bun.spawn(
+			["bunx", "oxfmt", "--check", ".oxlintrc.json", ".oxfmtrc.json", "eslint.config.ts", "package.json"],
+			{
+				cwd: dir,
+				stdout: "pipe",
+				stderr: "pipe",
+			},
+		);
+		expect(await proc.exited).toBe(0);
+	});
+
 	it("is idempotent — a second run changes nothing and exits 0", async () => {
 		const dir = make_consumer("init-idempotent");
 		await run_bin(dir, ["init"]);

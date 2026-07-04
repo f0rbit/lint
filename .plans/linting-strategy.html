@@ -234,7 +234,7 @@
     <main>
       <header>
         <h1>Plan: @f0rbit/lint — Ecosystem Linting + Formatting</h1>
-        <span class="badge todo">todo</span>
+        <span class="badge doing">doing</span>
         <p>Build a new monorepo <code>@f0rbit/lint</code> at <code>~/dev/lint</code> housing all lint + format configuration for the f0rbit ecosystem, then roll it out to corpus (pilot), the devpad scaffolder, and pulse / vault / devpad / ui. Strategy is <strong>Option 2: hybrid oxlint fast gate + thin typed ESLint layer</strong>, with <strong>oxfmt as the formatter everywhere (hard requirement)</strong>. The ESLint layer carries the typed rule family plus the custom type-aware <code>must-use-result</code> rule over the corpus <code>Result&lt;T,E&gt;</code> shape. Configs ship as factory functions parameterised per repo (naming preset, package name). This plan completes the earlier decision-stop plan that lived at <code>~/dev/corpus/.plans/linting-strategy.html</code> (now a tombstone pointing here).</p>
       </header>
 
@@ -712,7 +712,7 @@
           <article class="task" id="task-1-1">
             <header>
               <h3>Task 1.1: Workspace root, CI, branch protection, repo seed</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -765,14 +765,19 @@ gh api repos/f0rbit/lint | jq '{squash: .allow_squash_merge, merge: .allow_merge
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <ul>
+                <li>Commit <code>0ef3a31</code> (<code>chore: scaffold bun workspace root with ci and release pipelines</code>) — CI green on main.</li>
+                <li>Adversary walk: zero <code>npm</code>/<code>npx</code> in scripts + workflows (grep clean); tsconfig carries <code>strict</code> + <code>noUncheckedIndexedAccess</code> + <code>exactOptionalPropertyTypes</code>; bun pinned <code>1.3.13</code> in both <code>ci.yml</code> and <code>release.yml</code>.</li>
+                <li><code>gh api repos/f0rbit/lint</code>: <code>squash: true, merge: false, rebase: false</code>; branch protection requires status check <code>verify</code> (exact job name) + 1 approving review.</li>
+                <li>README documents the oxlint ↔ eslint-plugin-oxlint same-commit bump rule (Version-pinning policy section).</li>
+              </ul>
             </section>
           </article>
 
           <article class="task" id="task-1-2">
             <header>
               <h3>Task 1.2: packages/oxlint-config + packages/oxfmt-config</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -818,14 +823,19 @@ gh api repos/f0rbit/lint | jq '{squash: .allow_squash_merge, merge: .allow_merge
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <ul>
+                <li>Commit <code>9b5a884</code>. Exact pins: <code>oxlint 1.72.0</code>, <code>oxfmt 0.57.0</code> (devDependencies, tests only). <code>files</code> arrays ship the JSON artifacts.</li>
+                <li>Fixture tests spawn the real binaries; bad fixture fires all five expected rule codes (<code>unicorn(filename-case)</code>, <code>typescript(no-explicit-any)</code>, <code>typescript(no-non-null-assertion)</code>, <code>eslint(max-depth)</code>, <code>eslint(no-else-return)</code>), clean fixtures silent. <code>oxfmtrc.json</code> tabs + width 120 guarded by a test.</li>
+                <li>No native enum ban in oxlint 1.72.0 — correctly left to the ESLint layer (deviation validated).</li>
+                <li>Verification fix: canonical <code>oxlintrc.json</code> gained root-level <code>ignorePatterns</code> (node_modules/dist/coverage) for direct <code>-c</code> use; NOTE oxlint does not propagate <code>ignorePatterns</code> through <code>extends</code>, so the consumer stub carries its own copy (see task 1.4 proof).</li>
+              </ul>
             </section>
           </article>
 
           <article class="task" id="task-1-3">
             <header>
               <h3>Task 1.3: packages/eslint-config — the define_lint_config factory</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -873,14 +883,19 @@ gh api repos/f0rbit/lint | jq '{squash: .allow_squash_merge, merge: .allow_merge
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <ul>
+                <li>Commit <code>c798ec9</code>. Zod schema is the single type source (<code>LintOptions = z.input&lt;typeof schema&gt;</code>); zero <code>any</code>/casts in <code>src/</code>; no repo-specific strings. Plugins exact-pinned: <code>eslint-plugin-functional 10.0.0</code>, <code>eslint-plugin-import-x 4.17.1</code>, <code>eslint-plugin-oxlint 1.72.0</code>, <code>eslint-plugin-sonarjs 4.1.0</code>, <code>zod 4.4.3</code>.</li>
+                <li>Ordering test proves the de-dupe block is LAST (after caller overrides). Behaviour tests prove typed linting through <code>projectService</code> under bun (<code>@typescript-eslint/no-floating-promises</code> fires); both naming presets exercised.</li>
+                <li><strong>Deviation validated — eslint/typescript-eslint as peers</strong> (<code>^10.0.0</code> / <code>^8.62.0</code>, exact pins only in the umbrella): consumer simulation (bun pm pack all four packages → throwaway <code>/tmp</code> install of ONLY <code>@f0rbit/lint</code>, hoisted linker) resolves <code>eslint 10.6.0</code> + <code>typescript-eslint 8.62.1</code> + auto-installed peer <code>typescript</code>; <code>define_lint_config</code> works and typed rules fire.</li>
+                <li><strong>Deviation validated — de-dupe drop set audited</strong>: stub-based <code>buildFromOxlintConfigFile</code> yields 94 disable entries vs 126 from the canonical file. Of the 32 dropped: 29 are no-ops (never enabled in the ESLint layer) and 3 double-report in both tools (<code>no-extraneous-class</code>, <code>no-unnecessary-type-constraint</code>, <code>no-useless-constructor</code>). Every convention-matrix rule checked: oxlint-owned ones (<code>filename-case</code>, <code>no-explicit-any</code>, <code>no-non-null-assertion</code>, <code>max-depth</code>, <code>no-else-return</code>) correctly de-duped through the stub; ESLint-owned ones (naming-convention, functional/*, typed family, import-x, sonarjs, enum ban) all stay live. Coverage is never lost — a dropped entry only risks a duplicate diagnostic.</li>
+              </ul>
             </section>
           </article>
 
           <article class="task" id="task-1-4">
             <header>
               <h3>Task 1.4: packages/lint umbrella + f0rbit-lint bin + dogfood</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -928,7 +943,13 @@ gh api repos/f0rbit/lint | jq '{squash: .allow_squash_merge, merge: .allow_merge
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <ul>
+                <li>Commit <code>066ade6</code> + verification close-out commit (HEAD of the PR branch). <code>bun run verify</code> fully green: typecheck, 30 tests across 6 files, <code>oxlint . &amp;&amp; eslint .</code> exit 0, <code>oxfmt --check .</code> clean on 31 files. Zero inline <code>eslint-disable</code> anywhere in the repo.</li>
+                <li>Pins exact and single-sourced in <code>packages/lint</code>: <code>oxlint 1.72.0</code>, <code>oxfmt 0.57.0</code>, <code>eslint 10.6.0</code>, <code>typescript-eslint 8.62.1</code>, <code>jiti 2.7.0</code> (siblings only repeat as devDeps for tests). <code>bun pm pack</code> confirmed rewriting <code>workspace:*</code> → <code>0.1.0</code> in the tarball manifests — release.yml needs no rewrite step.</li>
+                <li>Consumer simulation end-to-end (packed tarballs → <code>/tmp</code> consumer, hoisted linker, <code>"types": ["bun"]</code>, no <code>.gitignore</code>): install exposes all four bins; <code>f0rbit-lint init</code> → <code>bun run lint</code>, <code>bun run fmt:check</code>, <code>f0rbit-lint check</code> all exit 0; re-init idempotent (all "up to date"); <code>--force</code> semantics covered by tests; seeded violations fire (oxlint <code>no-explicit-any</code>; ESLint <code>functional/no-classes</code> + typed <code>no-floating-promises</code>).</li>
+                <li><strong>Verification fixes (this close-out)</strong>: (1) init's <code>.oxlintrc.json</code> stub was <code>JSON.stringify</code> output that failed oxfmt — now a formatted literal; (2) init-merged <code>package.json</code> failed <code>fmt:check</code> (oxfmt canonicalises key order) — init now formats <code>package.json</code> after merging; (3) a consumer without <code>.gitignore</code> linted <code>node_modules</code> (oxlint walks by gitignore; <code>ignorePatterns</code> don't propagate via <code>extends</code>) — the stub now carries <code>ignorePatterns</code> itself. Regression test added: init-written files pass <code>oxfmt --check</code>.</li>
+                <li>Consumer prerequisite discovered: bun/node types must be visible to the projectService default project (<code>"types": ["bun"]</code>) or the config stub self-flags <code>no-unsafe-assignment</code> on <code>import.meta.dirname</code> — documented in AGENTS.md.</li>
+              </ul>
             </section>
           </article>
         </section>

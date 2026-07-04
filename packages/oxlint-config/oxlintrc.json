@@ -1,4 +1,5 @@
 {
+	"ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/coverage/**"],
 	"plugins": ["typescript", "unicorn", "import", "oxc"],
 	"categories": {
 		"correctness": "error",

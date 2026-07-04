@@ -5,7 +5,15 @@ import { join } from "node:path";
 
 const require_from_here = createRequire(import.meta.url);
 
-const oxlint_stub = `${JSON.stringify({ extends: ["./node_modules/@f0rbit/oxlint-config/oxlintrc.json"] }, null, "\t")}\n`;
+// literal (not JSON.stringify) so the written stub is already oxfmt-canonical —
+// init must not produce files that immediately fail the fmt:check script it installs.
+// ignorePatterns live in the stub, not only the extended config: oxlint honours
+// ignorePatterns from the root config file only — they do not propagate via extends.
+const oxlint_stub = `{
+	"extends": ["./node_modules/@f0rbit/oxlint-config/oxlintrc.json"],
+	"ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/coverage/**"]
+}
+`;
 
 const eslint_stub = `import { define_lint_config } from "@f0rbit/lint";
 
@@ -60,6 +68,10 @@ const merge_scripts = (cwd: string): string[] => {
 	manifest.scripts = scripts;
 	const indent = raw.includes("\n\t") ? "\t" : "  ";
 	writeFileSync(path, `${JSON.stringify(manifest, null, indent)}\n`);
+	// oxfmt canonicalises package.json key order — format the file we just
+	// modified so init never leaves a file behind that fails its own fmt:check
+	const fmt = Bun.spawnSync(["bunx", "oxfmt", "package.json"], { cwd });
+	if (fmt.exitCode !== 0) notes.push('  ! could not oxfmt package.json — run "bun run fmt" manually');
 	return notes;
 };
 
