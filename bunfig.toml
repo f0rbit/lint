@@ -1,0 +1,4 @@
+[install]
+# The umbrella package model depends on hoisting: tool binaries pinned in
+# packages/lint must surface in the root node_modules/.bin for scripts.
+linker = "hoisted"
