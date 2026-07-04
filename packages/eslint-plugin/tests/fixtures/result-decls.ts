@@ -1,0 +1,14 @@
+type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
+type ApiResult<T> = Result<T, { code: number }>;
+type LookAlike = { ok: boolean; value: number } | { ok: boolean; error: string };
+type OkOnly = { ok: true; value: number } | { ok: true; other: string };
+declare function get_result(): Result<number, string>;
+declare function get_result_promise(): Promise<Result<number, string>>;
+declare function get_optional_result(): Result<number, string> | undefined;
+declare function fetch_user(): ApiResult<{ name: string }>;
+declare function get_look_alike(): LookAlike;
+declare function get_ok_only(): OkOnly;
+declare function get_number(): number;
+declare function log(value: unknown): void;
+declare function take(result: Result<number, string>): void;
+declare const get_result_maybe: (() => Result<number, string>) | undefined;
