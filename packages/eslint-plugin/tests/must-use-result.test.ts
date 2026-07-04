@@ -10,7 +10,9 @@ clearCaches();
 RuleTester.afterAll = afterAll;
 RuleTester.describe = describe;
 RuleTester.it = it;
-RuleTester.itOnly = it.only;
+RuleTester.itOnly = (name, fn) => {
+	it.only(name, fn);
+};
 
 const fixtures_dir = join(import.meta.dirname, "fixtures");
 const decls = readFileSync(join(fixtures_dir, "result-decls.ts"), "utf8");
