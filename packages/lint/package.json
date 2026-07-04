@@ -1,6 +1,6 @@
 {
 	"name": "@f0rbit/lint",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "The f0rbit lint + format toolchain in one install — oxlint fast gate, thin typed ESLint layer, oxfmt formatting, and the f0rbit-lint init/check CLI",
 	"license": "MIT",
 	"repository": {
