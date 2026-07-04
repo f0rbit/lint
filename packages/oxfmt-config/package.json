@@ -1,6 +1,6 @@
 {
 	"name": "@f0rbit/oxfmt-config",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Shared oxfmt configuration for the f0rbit ecosystem — tabs, print width 120, otherwise Prettier-compatible defaults",
 	"license": "MIT",
 	"repository": {

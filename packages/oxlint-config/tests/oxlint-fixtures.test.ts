@@ -39,6 +39,12 @@ describe("oxlint config fixtures", () => {
 		expect(codes).toEqual([]);
 	});
 
+	it("allows member access on a default export that also has named exports (fc.record pattern)", async () => {
+		const { codes, exit_code } = await run_oxlint("clean/default-member-fixture.ts");
+		expect(exit_code).toBe(0);
+		expect(codes).toEqual([]);
+	});
+
 	it("parses as a valid config for the pinned oxlint (unknown rules would fail every run)", async () => {
 		const { exit_code } = await run_oxlint("clean/clean-fixture.ts");
 		expect(exit_code).toBe(0);

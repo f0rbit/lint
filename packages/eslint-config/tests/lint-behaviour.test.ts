@@ -47,6 +47,16 @@ describe("lint behaviour against fixtures", () => {
 		expect(ids).toContain("f0rbit/must-use-result");
 	});
 
+	it("accepts explicit default type args at boundaries (Result<T, CorpusError> annotations stay legal)", async () => {
+		const ids = await rule_ids(create_runner("snake_case"), "boundary-annotation-fixture.ts");
+		expect(ids).toEqual([]);
+	});
+
+	it("accepts awaitless async provider methods implementing Promise-returning interfaces", async () => {
+		const ids = await rule_ids(create_runner("snake_case"), "provider-await-fixture.ts");
+		expect(ids).toEqual([]);
+	});
+
 	it("camelCase preset accepts createThing and rejects create_thing", async () => {
 		const results = await create_runner("camelCase").lintFiles(["naming-fixture.ts"]);
 		const naming_messages = (results[0]?.messages ?? []).filter(

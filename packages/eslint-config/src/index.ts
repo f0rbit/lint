@@ -56,6 +56,10 @@ function typed_family(tsconfig_root_dir: string): Linter.Config[] {
 					"error",
 					{ prefer: "type-imports", fixStyle: "inline-type-imports" },
 				],
+				// Decision log: the annotate-at-boundaries convention keeps type args explicit even when they equal the default (Result<T, CorpusError>) — the strict preset flags exactly those deliberate annotations.
+				"@typescript-eslint/no-unnecessary-type-arguments": "off",
+				// Decision log: provider-pattern in-memory implementations satisfy Promise-returning interfaces with awaitless async methods; the rule has no interface-implementation allowance.
+				"@typescript-eslint/require-await": "off",
 				"no-restricted-syntax": [
 					"error",
 					{ selector: "TSEnumDeclaration", message: "Enums are banned — use a string literal union." },
