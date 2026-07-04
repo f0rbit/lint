@@ -98,6 +98,24 @@ describe("define_lint_config factory", () => {
 		expect(linter_options?.reportUnusedDisableDirectives).toBe("error");
 	});
 
+	it("registers the f0rbit plugin and enables must-use-result in both presets", () => {
+		for (const naming of ["snake_case", "camelCase"] as const) {
+			const configs = define_lint_config({ ...base_options, naming });
+			const org_config = configs.find((config) => config.plugins?.["f0rbit"]);
+			expect(org_config).toBeDefined();
+			expect(org_config?.rules?.["f0rbit/must-use-result"]).toBe("error");
+		}
+	});
+
+	it("places org rules before caller overrides so repos can scope exceptions", () => {
+		const override: Linter.Config = { name: "test/override", rules: { "f0rbit/must-use-result": "off" } };
+		const configs = define_lint_config({ ...base_options, overrides: [override] });
+		const org_index = configs.findIndex((config) => config.rules?.["f0rbit/must-use-result"] === "error");
+		const override_index = configs.findIndex((config) => config.name === "test/override");
+		expect(org_index).toBeGreaterThan(-1);
+		expect(override_index).toBeGreaterThan(org_index);
+	});
+
 	it("rejects invalid options via the zod schema", () => {
 		const bad_naming: unknown = { naming: "kebab-case", tsconfig_root_dir: fixtures_dir };
 		const missing_root: unknown = { naming: "snake_case" };

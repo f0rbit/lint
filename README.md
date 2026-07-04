@@ -56,9 +56,29 @@ Exceptions are **config-scoped, not comment-scoped**: known allowlists go in `ov
 | `@f0rbit/oxlint-config` | Static `oxlintrc.json` — the fast syntactic gate                                                       |
 | `@f0rbit/oxfmt-config`  | Static `oxfmtrc.json` — tabs, width 120                                                                |
 | `@f0rbit/eslint-config` | `define_lint_config` factory — the thin typed layer                                                    |
-| `@f0rbit/eslint-plugin` | Custom org rules (`f0rbit/must-use-result`) — phase 2                                                  |
+| `@f0rbit/eslint-plugin` | Custom typed org rules (`f0rbit/must-use-result`)                                                      |
 
 Layout convention is `packages/<tool>-config` per toolchain, reserving room for non-JS languages later (e.g. a future `packages/rustfmt-config`).
+
+## Custom rules
+
+### `f0rbit/must-use-result` (on by default, both presets)
+
+A discarded `Result`-returning call is a silently swallowed error. The rule flags statement-position calls whose type is structurally a Result — a union discriminated on a boolean-literal `ok` with a `{ ok: true; value }` arm and a `{ ok: false; error }` arm. Detection is structural, never name-based, so it matches corpus's local `Result`, `@f0rbit/corpus`'s export, and any structurally-identical homegrown copy. `Promise<Result>` is unwrapped through the checker's awaited type: both `await f();` and a floating `f();` are caught, as are `void f();` and optional-chained calls.
+
+```ts
+get_result(); // ✗ discarded
+await get_result_async(); // ✗ awaited then discarded
+void get_result(); // ✗ void still hides the error arm
+get_result_async(); // ✗ floating Promise<Result>
+
+const result = get_result(); // ✓ assigned
+return get_result(); // ✓ returned
+take(get_result()); // ✓ passed along
+if (get_result().ok) log(result); // ✓ inspected
+```
+
+Intentional discards are config-scoped like every other exception: a `files`-scoped block in `overrides` setting `"f0rbit/must-use-result": "off"`, or a described `eslint-disable-next-line f0rbit/must-use-result -- reason` for a one-off.
 
 ## Version-pinning policy
 

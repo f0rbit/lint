@@ -27,6 +27,7 @@
 	},
 	"dependencies": {
 		"@f0rbit/eslint-config": "workspace:*",
+		"@f0rbit/eslint-plugin": "workspace:*",
 		"@f0rbit/oxfmt-config": "workspace:*",
 		"@f0rbit/oxlint-config": "workspace:*",
 		"eslint": "10.6.0",
