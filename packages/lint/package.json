@@ -1,0 +1,38 @@
+{
+	"name": "@f0rbit/lint",
+	"version": "0.1.0",
+	"description": "The f0rbit lint + format toolchain in one install — oxlint fast gate, thin typed ESLint layer, oxfmt formatting, and the f0rbit-lint init/check CLI",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/f0rbit/lint.git",
+		"directory": "packages/lint"
+	},
+	"bin": {
+		"f0rbit-lint": "./src/bin.ts"
+	},
+	"files": [
+		"src",
+		"README.md"
+	],
+	"type": "module",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./package.json": "./package.json"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@f0rbit/eslint-config": "workspace:*",
+		"@f0rbit/oxfmt-config": "workspace:*",
+		"@f0rbit/oxlint-config": "workspace:*",
+		"eslint": "10.6.0",
+		"jiti": "2.7.0",
+		"oxfmt": "0.57.0",
+		"oxlint": "1.72.0",
+		"typescript-eslint": "8.62.1"
+	}
+}

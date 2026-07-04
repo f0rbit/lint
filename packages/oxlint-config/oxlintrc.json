@@ -1,0 +1,16 @@
+{
+	"ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/coverage/**"],
+	"plugins": ["typescript", "unicorn", "import", "oxc"],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "error"
+	},
+	"rules": {
+		"unicorn/filename-case": ["error", { "case": "kebabCase" }],
+		"typescript/no-explicit-any": "error",
+		"typescript/no-non-null-assertion": "error",
+		"max-depth": ["error", { "max": 5 }],
+		"no-else-return": "error",
+		"import/no-self-import": "error"
+	}
+}
