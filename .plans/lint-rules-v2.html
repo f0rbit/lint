@@ -701,7 +701,7 @@ npm view @f0rbit/lint version   # after tag → expect 0.2.0</pre>
                 <li><code>org_rules</code> block confirmed to contain exactly 4 rules post-merge (<code>must-use-result</code>: error, <code>prefer-pipe</code>: warn, <code>no-ambient-effects</code>: warn, <code>no-test-mocks</code>: error) — read directly from <code>packages/eslint-config/src/index.ts</code>, matches the tier map exactly.</li>
                 <li>Version bump: all 5 <code>package.json</code> files + <code>packages/eslint-plugin/src/index.ts</code>'s <code>meta.version</code> 0.1.5 → 0.2.0; <code>rm bun.lock &amp;&amp; bun install</code> regenerated the lockfile in the same unit of work; <code>tests/workspace.test.ts</code> packed-tarballs regression suite (6 tests) green.</li>
                 <li><code>CI=true bun run verify</code>: 136 tests across 10 files pass, <code>oxlint . &amp;&amp; eslint .</code> clean, <code>oxfmt --check .</code> clean.</li>
-                <li>Commit SHA and PR number recorded in a follow-up commit on this branch once pushed (this proof slot's initial fill predates PR creation — see the phase-1 branch history for the exact SHA/PR#).</li>
+                <li>Commit <code>16564cf</code> (<code>feat: add prefer-pipe, no-ambient-effects, no-test-mocks rules and console/type-definition config tightening</code>), branch <code>v2/phase-1</code>, PR <a href="https://github.com/f0rbit/lint/pull/10">#10</a>. Tagging <code>v0.2.0</code> and the npm publish happen after PR merge, not as part of this task.</li>
               </ul>
             </section>
           </article>
