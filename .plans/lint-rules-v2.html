@@ -348,7 +348,7 @@
           <article class="task" id="task-1-1">
             <header>
               <h3>Task 1.1: Extract shared Result matcher + f0rbit/prefer-pipe</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -395,14 +395,19 @@
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <ul>
+                <li>Merged from <code>v2/prefer-pipe</code> (<code>ec15dad</code>) into <code>v2/phase-1</code>. Extraction verified byte-for-byte against <code>main</code>'s pre-extraction <code>must-use-result.ts</code> (<code>nullish_flags</code>, <code>boolean_literal_name</code>, <code>has_property</code>, <code>is_result_type</code>, <code>peel_to_call</code> — identical logic, only moved and exported) — behaviour-identical, confirmed by diff.</li>
+                <li><code>tests/prefer-pipe.test.ts</code>: 10 cases (single unwrap; two unwraps in different functions; gap of two statements; wrong-identifier guard; non-Result union adjacent guard; <code>x.ok === true</code> success check; classic 2-guard chain (1 report, first guard); 3-guard chain (still 1 report); <code>x.ok === false</code> variant; async/awaited chain) — all green. <code>must-use-result.test.ts</code> unaffected, still green.</li>
+                <li>Adversary walk: <code>grep</code> confirms zero <code>as</code> casts in <code>src/rules/</code> (plugin-index cast is the only one, outside <code>src/rules/</code>); guard matcher requires the identifier in test and return to match (<code>match_guard</code>/<code>guard_test_identifier</code> in <code>prefer-pipe.ts</code>); <code>itOnly</code> wrapped in a function and <code>clearCaches()</code> called at module load in the test file; all relative imports carry <code>.js</code> extensions.</li>
+                <li>Full suite: 136 tests across 10 files green under <code>CI=true bun run verify</code> (typecheck + test + lint + fmt:check).</li>
+              </ul>
             </section>
           </article>
 
           <article class="task" id="task-1-2">
             <header>
               <h3>Task 1.2: f0rbit/no-ambient-effects + ambient_effect_files factory option</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -449,14 +454,20 @@
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <ul>
+                <li><strong>Adversary finding, fixed by the verification coder:</strong> merged from <code>v2/no-ambient-effects</code> (<code>8dd1952</code>) the implementation used pure name-matching (<code>node.callee.object.name === "Date"</code>) with NO scope resolution — a local shadow (an injected clock provider) would have incorrectly flagged, and no shadowed-case test existed. This violated the task's own spec ("only when the base identifier is unresolved to any local binding") and the adversary checklist's first item. Fixed by adding <code>packages/eslint-plugin/src/rules/shared/scope.ts</code> (<code>resolve_reference</code>, <code>is_unshadowed_global</code>, <code>imported_from</code> — the last shared with task 1.3's fix) and gating each of the three checks (<code>Date.now()</code>, <code>new Date()</code> zero-arg, <code>Math.random()</code>) on <code>is_unshadowed_global(scope, identifier)</code>.</li>
+                <li>Added 3 shadowed-case tests (local <code>const Date</code>, local <code>class Date</code>, function-param <code>Math</code>) — suite grew from 15 to 18 cases, all green.</li>
+                <li>Factory tests (<code>packages/eslint-config/tests/factory.test.ts</code>): 5 cases confirm the <code>ambient_effect_files</code> allowlist is present when supplied, positioned strictly after <code>org_rules</code> and before a supplied caller override (index-asserted, not just presence), absent when the option is omitted, and that an empty array is rejected by the <code>.min(1)</code> Zod constraint. <code>LintOptions = z.input&lt;typeof lint_options_schema&gt;</code> remains the single source of truth — no hand-written duplicate type.</li>
+                <li><strong>Gap beyond the assigned red flags:</strong> no end-to-end factory-level proof existed for this rule (every other phase-1 rule had one). Added <code>tests/fixtures/no-ambient-effects-fixture.ts</code> + a <code>lint-behaviour.test.ts</code> case firing <code>f0rbit/no-ambient-effects</code> through a real <code>define_lint_config()</code> output.</li>
+                <li>Full suite: 136 tests across 10 files green under <code>CI=true bun run verify</code>.</li>
+              </ul>
             </section>
           </article>
 
           <article class="task" id="task-1-3">
             <header>
               <h3>Task 1.3: f0rbit/no-test-mocks</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -502,14 +513,20 @@
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <ul>
+                <li><strong>Adversary findings, fixed by the verification coder:</strong> merged from <code>v2/no-test-mocks</code> (<code>1b06ea5</code>) the implementation had four gaps against its own spec and adversary checklist: (1) detection was pure name-matching with no scope resolution at all — a locally-defined <code>mock</code> function or a <code>mock</code> imported from elsewhere would have incorrectly flagged, and aliased imports (<code>mock as m</code>) would NOT have flagged usage (since the callee name would be <code>m</code>, not <code>mock</code>); (2) <code>jest</code> imported from <code>bun:test</code> was never flagged on the import specifier (only <code>mock</code>/<code>spyOn</code> were checked); (3) <code>mock.module(...)</code> member-call usage was never detected; (4) the rule wasn't parameterized with <code>RuleCreator&lt;RuleDocs&gt;</code>, so <code>requiresTypeChecking</code> was never declared.</li>
+                <li>Fixed via a full rewrite using the new <code>shared/scope.ts</code> helpers: <code>imported_from(variable, "bun:test")</code> resolves a call's callee back to the specific named import that bound it (alias-proof — the resolution walks the declaration site, not the identifier's surface name), and the bare-global <code>jest</code> path is now gated on <code>variable === undefined</code> (no declaration at all) rather than name alone, so a locally-declared <code>jest</code> shadow (<code>const jest = helper</code>) correctly does NOT flag. Added <code>bun_test_jest</code> and <code>call_jest_mocked</code> messageIds, <code>mock.module()</code> detection, and <code>requiresTypeChecking: false</code>.</li>
+                <li>Test suite rewritten: 21 cases (9 valid — including the locally-defined <code>mock</code> function, the shadowed <code>jest</code> local, a bare unresolved <code>mock()</code> with no import at all correctly NOT flagging, and a cross-module aliased import; 12 invalid — including the <code>jest</code> import, an aliased <code>mock as m</code> usage, the bare-global <code>jest.spyOn/mock/mocked</code> forms, and <code>mock.module()</code>). All green.</li>
+                <li><code>vi</code>/vitest confirmed out of scope (no handling present — the ecosystem is bun test only, per the plan's out-of-scope section).</li>
+                <li>Full suite: 136 tests across 10 files green under <code>CI=true bun run verify</code>.</li>
+              </ul>
             </section>
           </article>
 
           <article class="task" id="task-1-4">
             <header>
               <h3>Task 1.4: Shared-config changes — consistent-type-definitions + no-console (+ dogfood overrides)</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -556,14 +573,21 @@
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <ul>
+                <li>Merged from <code>v2/config-tightenings</code> (<code>0f83f15</code>) — both rules carry a <code>// Decision log:</code> why-comment at the config site (grep-confirmed, matching the repo's existing decision-log convention exactly). <code>consistent-type-definitions</code> is <code>["error", "type"]</code>; <code>no-console</code> is the bare string <code>"error"</code> with no <code>{ allow: [...] }</code> — a full ban.</li>
+                <li>De-dupe survival: 3 new <code>factory.test.ts</code> cases use <code>effective_setting</code> (a <code>reduce</code> that walks the config array in order and keeps the LAST config defining the rule — genuine last-match-wins resolution, not "rule appears somewhere") and <code>collect_dedupe_rules</code> (merges only the trailing oxlint de-dupe configs) to assert both rules resolve to <code>error</code> AFTER the de-dupe block runs, and that neither rule appears inside the de-dupe block's own merged rules.</li>
+                <li><code>packages/oxlint-config/oxlintrc.json</code> confirmed untouched (<code>git diff main</code> clean); no accidental <code>JSON.parse</code> of it anywhere (grep clean).</li>
+                <li>Dogfood override in root <code>eslint.config.ts</code>: <code>{ files: ["packages/lint/src/bin.ts"], rules: { "no-console": "off" } }</code> with a description comment, scoped to that one file only.</li>
+                <li>2 new <code>lint-behaviour.test.ts</code> cases (<code>type-def-fixture.ts</code>, <code>console-fixture.ts</code>) prove both rules fire through the real <code>define_lint_config()</code> output, not just the unit-level factory array.</li>
+                <li>Full suite: 136 tests across 10 files green under <code>CI=true bun run verify</code>.</li>
+              </ul>
             </section>
           </article>
 
           <article class="task" id="task-1-5">
             <header>
               <h3>Task 1.5: Docs — rule anchors + void-operator fire-and-forget convention</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -607,14 +631,19 @@
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <ul>
+                <li><strong>Confirmed spec drift, fixed by the verification coder (this was the flagged red flag):</strong> merged from <code>v2/docs</code> (<code>d0500b0</code>), the docs coder never touched root <code>README.md</code> at all despite it being in this task's explicit file list — the Conventions subsection and the <code>ambient_effect_files</code> factory-snippet update were entirely missing. It also wrote two inaccurate bullets straight into <code>AGENTS.md</code> (out of this task's file scope): <code>no-ambient-effects</code> described as flagging "module-scope side effects" (the rule actually flags ambient <code>Date.now()</code>/<code>new Date()</code>/<code>Math.random()</code> — nothing about module scope), and the config tightenings described as "<code>no-floating-promises</code> void enforcement" + "<code>eslint-plugin-functional/no-promise-reject</code>" (neither exists anywhere in the plan or the merged code — the real tightenings are <code>consistent-type-definitions</code> and the full <code>no-console</code> ban).</li>
+                <li><code>packages/eslint-plugin/README.md</code>'s four new rule sections were ALL materially wrong, verified by re-reading the merged rule implementations directly: the <code>prefer-pipe</code> example didn't match the real if-guard detection at all; <code>no-ambient-effects</code> described module-scope mutations/subscriptions (a different rule entirely — the real rule never looks at module scope); <code>no-test-mocks</code> used a <code>vi.fn()</code> example — vitest, explicitly out of scope this wave, which the rule would never flag; <code>require-schema-at-boundary</code> was thin and vague versus the plan's detailed source/sink spec. Additionally every one of the 5 rule-section headings (including the pre-existing <code>must-use-result</code> one) used the form <code>f0rbit/name (vX.Y.Z)</code>, which breaks GitHub's heading-slug algorithm against the bare <code>#&lt;name&gt;</code> fragment the <code>RuleCreator</code> doc-URL actually builds.</li>
+                <li>Rewrote all 5 headings to the bare rule name; rewrote all 4 new sections with detection descriptions verified against the actual implementations (tier/type-aware/since metadata added), examples that match real rule behaviour, and the correct exemption mechanism per rule. Added the missing Conventions section (void-operator convention with the explicit Promise-vs-Result asymmetry) + rule tier table + updated factory-contract snippet to root <code>README.md</code>. Corrected the two inaccurate <code>AGENTS.md</code> bullets and added a new Gotchas entry documenting the shared scope-resolution helper pattern discovered while fixing tasks 1.2/1.3.</li>
+                <li>Verification commands re-run: <code>grep -c '^#{2,3} ' packages/eslint-plugin/README.md</code> → 7 (2 non-rule headings + 5 rule headings, all 5 rule headings anchor-correct); <code>grep -n 'void ' README.md</code> → now matches (previously zero, since root README was never touched). <code>require-schema-at-boundary</code> section explicitly reads "Since: 0.3.0 — not part of the 0.2.0 release."; tier table severities cross-checked against the merged <code>org_rules</code>/config-tightening wiring — exact match.</li>
+              </ul>
             </section>
           </article>
 
           <article class="task" id="task-1-6">
             <header>
               <h3>Task 1.6: Verification, dogfood sweep, release 0.2.0</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -664,7 +693,16 @@ npm view @f0rbit/lint version   # after tag → expect 0.2.0</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder (commit SHA, verify output, npm version, PR#).</div>
+              <ul>
+                <li>Merged 5 branches via <code>git merge --squash</code> in the specified order (<code>v2/prefer-pipe</code> → <code>v2/no-ambient-effects</code> → <code>v2/no-test-mocks</code> → <code>v2/config-tightenings</code> → <code>v2/docs</code>). Conflicts occurred exactly where predicted — <code>packages/eslint-plugin/src/index.ts</code> and <code>packages/eslint-config/src/index.ts</code> (rule-registration/<code>org_rules</code> lines, union of all additions kept) and <code>packages/eslint-config/tests/{factory,lint-behaviour}.test.ts</code> (union of all test additions kept). All 5 branches' diffs are represented — none lost.</li>
+                <li>Dogfood sweep: <code>bun run lint</code> was already clean against the merged repo's own source on the first pass — zero <code>no-console</code> hits outside <code>bin.ts</code>, zero stray <code>interface</code> declarations outside test fixtures (confirmed by targeted <code>grep</code> across <code>packages/*/src/</code>).</li>
+                <li>Two-item red-flag audit + full adversary sweep across all 5 tasks completed (see tasks 1.1–1.5 proof slots above for specifics) — both assigned red flags confirmed and fixed (docs spec drift; no-ambient-effects shadowing deferral, which the plan's own task-1.2 spec required, not permitted). Also fixed: no-test-mocks' equivalent scope-resolution gap (not explicitly named by the orchestrator but caught by the same adversary checklist item), the missing <code>jest</code>-import flag, missing <code>mock.module()</code>/<code>jest.mocked()</code> detection, and a missing end-to-end factory-level test for <code>no-ambient-effects</code>.</li>
+                <li>Cross-branch integration: new <code>tests/fixtures/combined-rules-fixture.ts</code> + one <code>lint-behaviour.test.ts</code> case fire <code>f0rbit/prefer-pipe</code>, <code>f0rbit/no-ambient-effects</code>, <code>f0rbit/no-test-mocks</code>, <code>@typescript-eslint/consistent-type-definitions</code>, and <code>no-console</code> simultaneously through one <code>define_lint_config()</code> output — all 5 present, proving <code>org_rules</code> ordering and the two config-tightening additions coexist correctly.</li>
+                <li><code>org_rules</code> block confirmed to contain exactly 4 rules post-merge (<code>must-use-result</code>: error, <code>prefer-pipe</code>: warn, <code>no-ambient-effects</code>: warn, <code>no-test-mocks</code>: error) — read directly from <code>packages/eslint-config/src/index.ts</code>, matches the tier map exactly.</li>
+                <li>Version bump: all 5 <code>package.json</code> files + <code>packages/eslint-plugin/src/index.ts</code>'s <code>meta.version</code> 0.1.5 → 0.2.0; <code>rm bun.lock &amp;&amp; bun install</code> regenerated the lockfile in the same unit of work; <code>tests/workspace.test.ts</code> packed-tarballs regression suite (6 tests) green.</li>
+                <li><code>CI=true bun run verify</code>: 136 tests across 10 files pass, <code>oxlint . &amp;&amp; eslint .</code> clean, <code>oxfmt --check .</code> clean.</li>
+                <li>Commit SHA and PR number recorded in a follow-up commit on this branch once pushed (this proof slot's initial fill predates PR creation — see the phase-1 branch history for the exact SHA/PR#).</li>
+              </ul>
             </section>
           </article>
         </section>

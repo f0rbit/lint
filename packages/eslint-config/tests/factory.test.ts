@@ -144,4 +144,77 @@ describe("define_lint_config factory", () => {
 		expect(() => define_lint_config(bad_naming as LintOptions)).toThrow();
 		expect(() => define_lint_config(missing_root as LintOptions)).toThrow();
 	});
+
+	it("includes ambient_effect_files allowlist when provided", () => {
+		const configs = define_lint_config({
+			...base_options,
+			ambient_effect_files: ["src/adapter/**", "src/provider/**"],
+		});
+		const allowlist_config = configs.find(
+			(config) => config.files && config.rules?.["f0rbit/no-ambient-effects"] === "off",
+		);
+		expect(allowlist_config).toBeDefined();
+		expect(allowlist_config?.files).toEqual(["src/adapter/**", "src/provider/**"]);
+	});
+
+	it("positions ambient_effect_files allowlist after org_rules and before overrides", () => {
+		const override: Linter.Config = { name: "test/override", rules: { "f0rbit/no-ambient-effects": "warn" } };
+		const configs = define_lint_config({
+			...base_options,
+			ambient_effect_files: ["src/adapter/**"],
+			overrides: [override],
+		});
+		const org_index = configs.findIndex((config) => config.rules?.["f0rbit/no-ambient-effects"] === "warn");
+		const allowlist_index = configs.findIndex(
+			(config) => config.files && config.rules?.["f0rbit/no-ambient-effects"] === "off",
+		);
+		const override_index = configs.findIndex((config) => config.name === "test/override");
+		expect(org_index).toBeGreaterThan(-1);
+		expect(allowlist_index).toBeGreaterThan(org_index);
+		expect(override_index).toBeGreaterThan(allowlist_index);
+	});
+
+	it("omits ambient_effect_files config when option not provided", () => {
+		const configs = define_lint_config(base_options);
+		const allowlist_config = configs.find(
+			(config) => config.files && config.rules?.["f0rbit/no-ambient-effects"] === "off",
+		);
+		expect(allowlist_config).toBeUndefined();
+	});
+
+	it("rejects ambient_effect_files as empty array via zod schema", () => {
+		const bad_ambient_files: unknown = {
+			naming: "snake_case",
+			tsconfig_root_dir: fixtures_dir,
+			ambient_effect_files: [],
+		};
+		expect(() => define_lint_config(bad_ambient_files as LintOptions)).toThrow();
+	});
+
+	it("enables consistent-type-definitions: error, type for both presets", () => {
+		for (const naming of ["snake_case", "camelCase"] as const) {
+			const configs = define_lint_config({ ...base_options, naming });
+			const setting = effective_setting(configs, "@typescript-eslint/consistent-type-definitions");
+			expect(setting).toEqual(["error", "type"]);
+		}
+	});
+
+	it("enables no-console: error for both presets", () => {
+		for (const naming of ["snake_case", "camelCase"] as const) {
+			const configs = define_lint_config({ ...base_options, naming });
+			const setting = effective_setting(configs, "no-console");
+			expect(setting).toBe("error");
+		}
+	});
+
+	it("keeps consistent-type-definitions and no-console enabled through the full config array (de-dupe survival)", () => {
+		const configs = define_lint_config(base_options);
+		const dedupe_rules = collect_dedupe_rules(configs);
+		// These rules shouldn't be in the de-dupe block at all (they're not oxlint rules)
+		expect(dedupe_rules["@typescript-eslint/consistent-type-definitions"]).toBeUndefined();
+		expect(dedupe_rules["no-console"]).toBeUndefined();
+		// Verify the rules remain enabled in the final effective setting
+		expect(effective_setting(configs, "@typescript-eslint/consistent-type-definitions")).toEqual(["error", "type"]);
+		expect(effective_setting(configs, "no-console")).toBe("error");
+	});
 });

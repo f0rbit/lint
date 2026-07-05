@@ -47,6 +47,11 @@ describe("lint behaviour against fixtures", () => {
 		expect(ids).toContain("f0rbit/must-use-result");
 	});
 
+	it("flags a chained Result unwrap via f0rbit/prefer-pipe through the full factory config", async () => {
+		const ids = await rule_ids(create_runner("snake_case"), "prefer-pipe-fixture.ts");
+		expect(ids).toContain("f0rbit/prefer-pipe");
+	});
+
 	it("accepts explicit default type args at boundaries (Result<T, CorpusError> annotations stay legal)", async () => {
 		const ids = await rule_ids(create_runner("snake_case"), "boundary-annotation-fixture.ts");
 		expect(ids).toEqual([]);
@@ -116,5 +121,52 @@ describe("lint behaviour against fixtures", () => {
 	it("bundler module_resolution accepts the same extensionless relative import", async () => {
 		const ids = await rule_ids(create_runner("snake_case", "bundler"), "import-fixture.ts");
 		expect(ids).not.toContain("import-x/extensions");
+	});
+
+	it("flags mock/spyOn imports from bun:test via f0rbit/no-test-mocks", async () => {
+		const ids = await rule_ids(create_runner("snake_case"), "mock-fixture.ts");
+		expect(ids).toContain("f0rbit/no-test-mocks");
+	});
+
+	it("flags mock() and spyOn() calls via f0rbit/no-test-mocks", async () => {
+		const results = await create_runner("snake_case").lintFiles(["mock-fixture.ts"]);
+		const mock_messages = (results[0]?.messages ?? []).filter((message) => message.ruleId === "f0rbit/no-test-mocks");
+		expect(mock_messages.length).toBeGreaterThanOrEqual(2);
+	});
+
+	it("flags jest.fn(), jest.mock(), and jest.spyOn() calls via f0rbit/no-test-mocks", async () => {
+		const results = await create_runner("snake_case").lintFiles(["mock-fixture.ts"]);
+		const mock_messages = (results[0]?.messages ?? []).filter((message) => message.ruleId === "f0rbit/no-test-mocks");
+		expect(mock_messages.length).toBeGreaterThanOrEqual(5);
+	});
+
+	it("accepts in-memory fake implementations (no mock/spyOn usage)", async () => {
+		const ids = await rule_ids(create_runner("snake_case"), "fake-fixture.ts");
+		expect(ids.filter((id) => id === "f0rbit/no-test-mocks")).toEqual([]);
+	});
+
+	it("flags interface definitions via consistent-type-definitions", async () => {
+		const ids = await rule_ids(create_runner("snake_case"), "type-def-fixture.ts");
+		expect(ids).toContain("@typescript-eslint/consistent-type-definitions");
+	});
+
+	it("flags all console.* calls via no-console", async () => {
+		const ids = await rule_ids(create_runner("snake_case"), "console-fixture.ts");
+		const console_ids = ids.filter((id) => id === "no-console");
+		expect(console_ids.length).toBeGreaterThan(0);
+	});
+
+	it("flags ambient Date/Math reads via f0rbit/no-ambient-effects through the full factory config", async () => {
+		const ids = await rule_ids(create_runner("snake_case"), "no-ambient-effects-fixture.ts");
+		expect(ids).toContain("f0rbit/no-ambient-effects");
+	});
+
+	it("fires all five phase-1 rule additions simultaneously on one combined fixture (org_rules ordering intact)", async () => {
+		const ids = await rule_ids(create_runner("snake_case"), "combined-rules-fixture.ts");
+		expect(ids).toContain("f0rbit/prefer-pipe");
+		expect(ids).toContain("f0rbit/no-ambient-effects");
+		expect(ids).toContain("f0rbit/no-test-mocks");
+		expect(ids).toContain("@typescript-eslint/consistent-type-definitions");
+		expect(ids).toContain("no-console");
 	});
 });

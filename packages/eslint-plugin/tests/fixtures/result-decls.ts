@@ -12,3 +12,4 @@ declare function get_number(): number;
 declare function log(value: unknown): void;
 declare function take(result: Result<number, string>): void;
 declare const get_result_maybe: (() => Result<number, string>) | undefined;
+declare function get_result_from(value: number): Result<number, string>;
