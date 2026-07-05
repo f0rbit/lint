@@ -161,11 +161,17 @@ describe("lint behaviour against fixtures", () => {
 		expect(ids).toContain("f0rbit/no-ambient-effects");
 	});
 
-	it("fires all five phase-1 rule additions simultaneously on one combined fixture (org_rules ordering intact)", async () => {
+	it("flags a cast on a raw JSON.parse boundary via f0rbit/require-schema-at-boundary through the full factory config", async () => {
+		const ids = await rule_ids(create_runner("snake_case"), "boundary-fixture.ts");
+		expect(ids).toContain("f0rbit/require-schema-at-boundary");
+	});
+
+	it("fires all phase-1 and phase-2 rule additions simultaneously on one combined fixture (org_rules ordering intact)", async () => {
 		const ids = await rule_ids(create_runner("snake_case"), "combined-rules-fixture.ts");
 		expect(ids).toContain("f0rbit/prefer-pipe");
 		expect(ids).toContain("f0rbit/no-ambient-effects");
 		expect(ids).toContain("f0rbit/no-test-mocks");
+		expect(ids).toContain("f0rbit/require-schema-at-boundary");
 		expect(ids).toContain("@typescript-eslint/consistent-type-definitions");
 		expect(ids).toContain("no-console");
 	});

@@ -199,6 +199,7 @@ const org_rules: Linter.Config = {
 		"f0rbit/prefer-pipe": "warn",
 		"f0rbit/no-ambient-effects": "warn",
 		"f0rbit/no-test-mocks": "error",
+		"f0rbit/require-schema-at-boundary": "error",
 	},
 };
 

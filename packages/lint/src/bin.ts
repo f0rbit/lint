@@ -2,8 +2,14 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
+import { z } from "zod";
 
 const require_from_here = createRequire(import.meta.url);
+
+// `.loose()` keeps every other package.json field untouched when the merged
+// manifest is written back out — this only needs to validate the one field
+// it reads and mutates.
+const manifest_schema = z.object({ scripts: z.record(z.string(), z.string()).optional() }).loose();
 
 // literal (not JSON.stringify) so the written stub is already oxfmt-canonical —
 // init must not produce files that immediately fail the fmt:check script it installs.
@@ -50,7 +56,7 @@ const merge_scripts = (cwd: string): string[] => {
 	const path = join(cwd, "package.json");
 	if (!existsSync(path)) return ["  ! package.json not found — scripts not merged"];
 	const raw = readFileSync(path, "utf8");
-	const manifest = JSON.parse(raw) as { scripts?: Record<string, string> };
+	const manifest = manifest_schema.parse(JSON.parse(raw));
 	const scripts = manifest.scripts ?? {};
 	const notes: string[] = [];
 	let changed = false;
