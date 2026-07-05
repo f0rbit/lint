@@ -7,7 +7,7 @@ import { no_test_mocks } from "./rules/no-test-mocks.js";
 import { require_schema_at_boundary } from "./rules/require-schema-at-boundary.js";
 
 const typed_plugin = {
-	meta: { name: "@f0rbit/eslint-plugin", version: "0.2.0" },
+	meta: { name: "@f0rbit/eslint-plugin", version: "0.3.0" },
 	rules: {
 		"must-use-result": must_use_result,
 		"prefer-pipe": prefer_pipe,

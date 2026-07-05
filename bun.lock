@@ -12,7 +12,7 @@
     },
     "packages/eslint-config": {
       "name": "@f0rbit/eslint-config",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@f0rbit/eslint-plugin": "workspace:*",
         "@f0rbit/oxlint-config": "workspace:*",
@@ -34,7 +34,7 @@
     },
     "packages/eslint-plugin": {
       "name": "@f0rbit/eslint-plugin",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@typescript-eslint/utils": "8.62.1",
       },
@@ -51,7 +51,7 @@
     },
     "packages/lint": {
       "name": "@f0rbit/lint",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "bin": {
         "f0rbit-lint": "./src/bin.ts",
       },
@@ -73,14 +73,14 @@
     },
     "packages/oxfmt-config": {
       "name": "@f0rbit/oxfmt-config",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "oxfmt": "0.57.0",
       },
     },
     "packages/oxlint-config": {
       "name": "@f0rbit/oxlint-config",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "oxlint": "1.72.0",
       },
