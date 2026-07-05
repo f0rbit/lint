@@ -18,5 +18,18 @@ export default define_lint_config({
 			files: ["packages/lint/src/bin.ts"],
 			rules: { "no-console": "off" },
 		},
+		{
+			// These JSON.parse reads are test-infrastructure reads of this repo's
+			// own generated output (bun pm pack manifests, oxlint's own JSON
+			// report, a scaffolded consumer's package.json written earlier in the
+			// same test) — not external trust boundaries, so a Zod parse here
+			// would just be test-code churn with no real safety benefit.
+			files: [
+				"tests/workspace.test.ts",
+				"packages/lint/tests/init.test.ts",
+				"packages/oxlint-config/tests/oxlint-fixtures.test.ts",
+			],
+			rules: { "f0rbit/require-schema-at-boundary": "off" },
+		},
 	],
 });
