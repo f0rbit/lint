@@ -1,0 +1,1189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Plan: @f0rbit/lint v2 — Boundary, Purity & Test-Rigor Rules</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --border: #30363d;
+        --text: #c9d1d9;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --todo: #6e7681;
+        --doing: #d29922;
+        --done: #2ea043;
+        --blocked: #f85149;
+        --decision: #db61a2;
+      }
+      html, body {
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 2rem;
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      h1, h2, h3 {
+        color: var(--text);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.3em;
+      }
+      h1 { font-size: 1.8rem; }
+      h2 { font-size: 1.4rem; margin-top: 2.5rem; }
+      h3 { font-size: 1.1rem; border: none; padding: 0; margin-top: 1.5rem; }
+      h4 {
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        margin: 0 0 0.3em 0;
+      }
+      code, pre {
+        font-family: "SF Mono", Menlo, monospace;
+        font-size: 0.9em;
+      }
+      code {
+        background: var(--panel);
+        padding: 1px 6px;
+        border-radius: 4px;
+      }
+      pre {
+        background: var(--panel);
+        padding: 12px;
+        border-radius: 6px;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 0.75em;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .badge.todo { background: var(--todo); color: #fff; }
+      .badge.doing { background: var(--doing); color: #000; }
+      .badge.done { background: var(--done); color: #fff; }
+      .badge.blocked { background: var(--blocked); color: #fff; }
+      .badge.decision { background: var(--decision); color: #fff; }
+      .badge.recommended { background: var(--accent); color: #000; }
+      .root-cause {
+        background: var(--panel);
+        border-left: 3px solid var(--accent);
+        padding: 0.75rem 1rem;
+        border-radius: 0 6px 6px 0;
+        margin: 1rem 0;
+      }
+      .root-cause p {
+        margin: 0.4em 0;
+      }
+      .recommendation {
+        background: rgba(88, 166, 255, 0.08);
+        border-left: 3px solid var(--accent);
+        padding: 0.75rem 1rem;
+        border-radius: 0 6px 6px 0;
+        margin: 1.5rem 0;
+      }
+      .recommendation h3 {
+        margin-top: 0;
+        border: none;
+        padding: 0;
+      }
+      .decision-log {
+        background: rgba(219, 97, 162, 0.08);
+        border-left: 3px solid var(--decision);
+        padding: 0.75rem 1rem;
+        border-radius: 0 6px 6px 0;
+        margin: 1.5rem 0;
+      }
+      .task {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+      }
+      .task > header {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+      }
+      .task h3 {
+        margin: 0;
+        flex: 1;
+      }
+      .meta {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 0.4em 1em;
+        font-size: 0.85em;
+        color: var(--muted);
+        margin: 0 0 0.75rem 0;
+      }
+      .meta dt {
+        font-weight: 600;
+        color: var(--text);
+      }
+      .meta dd {
+        margin: 0;
+      }
+      .task section {
+        margin-top: 0.75rem;
+      }
+      .proof {
+        background: rgba(46, 160, 67, 0.08);
+        border-left: 3px solid var(--done);
+        padding: 0.5rem 0.75rem;
+        border-radius: 0 6px 6px 0;
+      }
+      .empty-proof {
+        background: rgba(110, 118, 129, 0.08);
+        border-left: 3px solid var(--todo);
+        padding: 0.5rem 0.75rem;
+        color: var(--muted);
+        font-style: italic;
+        border-radius: 0 6px 6px 0;
+      }
+      .adversary {
+        background: rgba(219, 97, 162, 0.08);
+        border-left: 3px solid var(--decision);
+        padding: 0.5rem 0.75rem;
+        border-radius: 0 6px 6px 0;
+      }
+      .adversary ul {
+        margin: 0.3em 0;
+        padding-left: 1.5em;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1em 0;
+      }
+      th, td {
+        padding: 0.5em 0.75em;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        font-weight: 600;
+        color: var(--muted);
+        font-size: 0.8em;
+        text-transform: uppercase;
+      }
+      a { color: var(--accent); }
+      .phase {
+        margin: 2rem 0;
+        padding-left: 1rem;
+        border-left: 3px solid var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Plan: @f0rbit/lint v2 — Boundary, Purity &amp; Test-Rigor Rules</h1>
+        <span class="badge todo">todo</span>
+        <p>Second wave of the lint toolchain: four new custom org rules (<code>f0rbit/require-schema-at-boundary</code>, <code>f0rbit/no-ambient-effects</code>, <code>f0rbit/no-test-mocks</code>, <code>f0rbit/prefer-pipe</code>) plus two shared-config changes (<code>consistent-type-definitions: "type"</code>, full <code>no-console</code> ban) and one documented convention (fire-and-forget = <code>void</code> operator). Ships in two releases — <strong>0.2.0</strong> (cheap wins) and <strong>0.3.0</strong> (the hard type-aware boundary rule, piloted against corpus before release) — followed by a lightweight single-PR-per-repo rollout across the five already-clean consumers (corpus, vault, pulse, ui, devpad). Direction was fully user-decided via two A/B preference rounds; no alternatives evaluated beyond the decision record below.</p>
+      </header>
+
+      <section id="root-cause">
+        <h2>Root cause</h2>
+        <div class="root-cause">
+          <p><strong>Stated goal:</strong> Add four new custom rules and two config changes to <code>@f0rbit/lint</code>, then roll the new versions out to the five consumer repos.</p>
+          <p><strong>Underlying need:</strong> The v1 rollout proved the pipeline (toolchain, factory, custom typed rules, per-repo recipe) but its surveys exposed the bug classes that <em>remain prose</em>: <strong>boundary trust</strong> — 554 <code>no-unsafe-assignment</code> warns in devpad, pulse's <code>env.BUCKET as any</code>, corpus's 8× <code>cause as Error</code> — raw external data flows into typed code via casts instead of Zod parses; <strong>ambient non-determinism</strong> — the corpus backend-equivalence suite needed Date-precision special-casing purely because production code reads <code>Date.now()</code>/<code>new Date()</code> ambiently instead of through an injected clock; <strong>test rigor</strong> — vault's 25 and devpad's 65 discarded-Result-in-test fixes show tests drifting from the fakes-over-mocks discipline; and <strong>Result ergonomics</strong> — manual <code>if (!x.ok) return x;</code> unwrap chains where <code>pipe()</code> is the mandated composition. Each of these is a design-philosophy principle (Zod at every edge, provider pattern, Result discipline) that wave 1 didn't yet machine-check.</p>
+          <p><strong>Why this matters:</strong> Prose conventions rot at the rate the v1 surveys measured — hundreds of accumulated violations per repo. Every convention converted to a rule is one less thing agents must remember. Conversely, two surveyed signals are deliberately NOT rules in this wave: the devpad e2e <code>github_id: NULL</code> stale-fixture incident points at fixtures-from-<code>testing.arb()</code> adoption (a testing-substrate change, not a lint rule) and the pulse example wrong-subpath import points at a deep-import-boundaries rule (considered, deferred) — both recorded in out-of-scope so the evidence isn't lost.</p>
+        </div>
+      </section>
+
+      <section id="alternatives">
+        <h2>Alternatives considered</h2>
+        <p>No architectural alternatives evaluated — the direction was fully user-decided via two A/B preference-elicitation rounds (2026-07-05). The decision record below is the source of truth; rule-internal spec calls derived from it live under Architecture decisions.</p>
+        <div class="decision-log">
+          <h3>Decision record (user A/B outcomes — fixed)</h3>
+          <ol>
+            <li><strong><code>f0rbit/require-schema-at-boundary</code> — error tier, type-aware.</strong> Raw external data (<code>JSON.parse(...)</code>, <code>Response.json()</code>, equivalents) must flow through a Zod parse (<code>.parse()</code>/<code>.safeParse()</code> on a ZodType-typed receiver) before member access/use; <code>as</code>-casting a raw parse result is flagged. D1 rows / R2 reads are phase-in candidates, not v1 sources. Escape hatch: config-scoped overrides only.</li>
+            <li><strong><code>f0rbit/no-ambient-effects</code> — warn tier, syntactic.</strong> <code>Date.now()</code>, argless <code>new Date()</code>, <code>Math.random()</code> flagged outside designated provider/adapter files (factory option <code>ambient_effect_files?: string[]</code> glob allowlist). Graduation-note pattern like devpad's tiers.</li>
+            <li><strong><code>@typescript-eslint/consistent-type-definitions: ["error", "type"]</code></strong> in the shared config — autofixable. Converts many existing interfaces (corpus <code>backend/base.ts</code> MetadataStorage/DataStorage, provider interfaces everywhere) — mechanical burn-down in rollout.</li>
+            <li><strong>NO return-annotation rule</strong> — inference wins. Rollout DELETES corpus AGENTS.md's prose line "All public functions returning a Result should declare it explicitly".</li>
+            <li><strong>Fire-and-forget = <code>void</code> operator</strong> — documented convention only; <code>no-floating-promises</code>' default <code>ignoreVoid: true</code> already enforces the bare-call ban. Docs task, no rule.</li>
+            <li><strong><code>f0rbit/no-test-mocks</code> — error tier, syntactic.</strong> Flag <code>mock</code>/<code>spyOn</code>/<code>jest</code> imports+usages from <code>"bun:test"</code> (and trivial <code>jest.*</code> global equivalents) outside an allowlist. Fakes are the sanctioned double.</li>
+            <li><strong><code>no-console</code> full ban</strong> in the shared config (no warn/error allow-list) — services use structured logging; CLI packages + scripts exempt via per-repo overrides; corpus's <code>testing/registry.ts</code> + <code>testing/vending/</code> console.warns are DOCUMENTED design → scoped override + why-comment, do NOT redesign corpus's warn UX.</li>
+            <li><strong><code>f0rbit/prefer-pipe</code> — warn tier.</strong> Flag 2+ consecutive manual Result unwraps (<code>if (!x.ok) return x;</code>) in one function, suggesting <code>pipe()</code>. Reuses must-use-result's structural Result matcher. No autofix. Single unwraps untouched.</li>
+          </ol>
+        </div>
+        <section class="recommendation">
+          <h3>Page-vs-integrate gate</h3>
+          <p>n/a — no UI, pages, or nav anywhere in this plan.</p>
+        </section>
+      </section>
+
+      <section id="affected-areas">
+        <h2>Affected areas</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Path</th>
+              <th>Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>packages/eslint-plugin/src/rules/shared/result-type.ts</code></td>
+              <td>new — structural Result matcher extracted from must-use-result for reuse</td>
+            </tr>
+            <tr>
+              <td><code>packages/eslint-plugin/src/rules/{prefer-pipe,no-ambient-effects,no-test-mocks,require-schema-at-boundary}.ts</code></td>
+              <td>new — the four rules (last one in phase 2)</td>
+            </tr>
+            <tr>
+              <td><code>packages/eslint-plugin/src/rules/must-use-result.ts</code></td>
+              <td>modify — import the shared matcher instead of local copies</td>
+            </tr>
+            <tr>
+              <td><code>packages/eslint-plugin/src/index.ts</code></td>
+              <td>modify — four new rule entries; <code>meta.version</code> bumps (0.2.0, 0.3.0)</td>
+            </tr>
+            <tr>
+              <td><code>packages/eslint-plugin/tests/</code> (+ <code>fixtures/</code>)</td>
+              <td>new — four rule-tester suites; fixture decl additions (<code>boundary-decls.ts</code>, DOM lib in fixture tsconfig)</td>
+            </tr>
+            <tr>
+              <td><code>packages/eslint-plugin/README.md</code></td>
+              <td>modify — anchor-doc sections for the four rules (RuleCreator doc URLs point here)</td>
+            </tr>
+            <tr>
+              <td><code>packages/eslint-config/src/index.ts</code></td>
+              <td>modify — org_rules additions, <code>consistent-type-definitions</code> + <code>no-console</code> blocks, <code>ambient_effect_files</code> schema option + derived override</td>
+            </tr>
+            <tr>
+              <td><code>packages/eslint-config/tests/</code></td>
+              <td>modify — de-dupe-survival tests for the two config rules; factory-option tests</td>
+            </tr>
+            <tr>
+              <td><code>README.md</code>, <code>AGENTS.md</code>, <code>eslint.config.ts</code> (lint repo root)</td>
+              <td>modify — void convention docs, tier table, dogfood override for <code>packages/lint/src/bin.ts</code> console output</td>
+            </tr>
+            <tr>
+              <td><code>packages/*/package.json</code> ×5 + <code>bun.lock</code></td>
+              <td>modify — lockstep bumps 0.1.5 → 0.2.0 → 0.3.0, each with <code>rm bun.lock &amp;&amp; bun install</code></td>
+            </tr>
+            <tr>
+              <td><code>~/dev/{corpus,vault,pulse,ui,devpad}</code></td>
+              <td>modify — rollout: pin bump to 0.3.0, delta burn-down, scoped overrides, AGENTS.md updates (single PR per repo)</td>
+            </tr>
+            <tr>
+              <td><code>~/dev/corpus/AGENTS.md</code></td>
+              <td>modify — DELETE the return-annotation prose line (decision 4)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="architecture-decisions">
+        <h2>Architecture decisions</h2>
+        <p>Spec calls made within the fixed user decisions. None need user input.</p>
+        <ul>
+          <li id="spec-boundary"><strong><code>require-schema-at-boundary</code> — boundary sources (v1):</strong> (a) <code>JSON.parse(...)</code> where the callee resolves via the TypeChecker to the <em>global</em> <code>JSON</code> object (a local variable shadowing <code>JSON</code> does not count); (b) <code>.json()</code> method calls on a receiver whose type is <strong>fetch-Body-like</strong> — structurally: the receiver type has <code>json</code>, <code>text</code>, and <code>headers</code> members. This covers lib.dom <code>Response</code>/<code>Request</code>, undici, @cloudflare/workers-types, and framework request wrappers (Hono's <code>HonoRequest</code> etc.) — which is intentional: those ARE raw external data. NOT sources in v1: D1/Drizzle rows (already typed from the Drizzle schema — single source of truth holds), R2 body reads, <code>KV.get(..., "json")</code> — phase-in candidates in out-of-scope. <code>JSON.parse(JSON.stringify(x))</code> deep-clone idiom IS flagged (push to <code>structuredClone</code>); a carve-out is a deferred refinement.</li>
+          <li><strong><code>require-schema-at-boundary</code> — sanctioned sinks:</strong> a boundary expression is sanctioned when it flows (through any number of <code>await</code>/parenthesis/<code>ChainExpression</code> peels) into: (1) the sole argument of <code>.parse()</code> / <code>.safeParse()</code> / <code>.parseAsync()</code> / <code>.safeParseAsync()</code> on a receiver whose type structurally exposes callable <code>parse</code> AND <code>safeParse</code> members (ZodType-like — version-agnostic across zod 3/4, mirroring the repo's structural-matcher philosophy; custom validators exposing both are accepted by design); (2) a slot explicitly typed <code>unknown</code> — a <code>const x: unknown =</code> declaration, an argument whose declared parameter type is <code>unknown</code>, a return into a declared-<code>unknown</code> return type, or an <code>as unknown</code> widening cast. Everything else — member access, destructuring, <code>as T</code> casts (including <code>as unknown as T</code>: peel <code>as unknown</code> layers before judging the outer cast), assignment into any typed or inferred-<code>any</code> slot that is then used — is a violation.</li>
+          <li><strong><code>require-schema-at-boundary</code> — variable tracking is single-hop:</strong> when a boundary call initialises a <code>const</code>/<code>let</code> with no type annotation (inferred <code>any</code>), the variable becomes a raw-boundary variable via ESLint scope analysis; each reference is judged with the same sink rules (a reference flowing into a Zod parse or an <code>unknown</code> slot is fine; member access / cast / re-assignment to another variable flags). No transitive hops — assigning a raw variable onward is itself a violation, which keeps the analysis bounded and honest. Two messageIds: <code>unvalidated_boundary</code> and <code>cast_boundary</code>. Rule options schema: <code>[]</code> — the escape hatch is config-scoped <code>files</code> overrides only, per the exception-map convention.</li>
+          <li><strong>Both config changes live in the ESLint factory layer, not oxlint.</strong> oxlint 1.72.0 has both rules available but off by default (style / restriction categories). Owning them in the factory keeps ONE exception surface (the consumer's <code>overrides</code> array — the exception-map convention), keeps <code>eslint --fix</code> as the interface→type burn-down tool, and avoids splitting per-repo exemptions across <code>.oxlintrc.json</code> overrides. Each gets a why-comment at the config site and a <strong>de-dupe-survival test</strong> (last-matching-config resolution must keep them at error after <code>oxlint_dedupe</code> appends) so a future oxlint-config category change can't silently disable them.</li>
+          <li><strong>Shared matcher module:</strong> <code>is_result_type</code>, <code>boolean_literal_name</code>, <code>has_property</code>, <code>nullish_flags</code>, <code>peel_to_call</code> move from <code>must-use-result.ts</code> to <code>src/rules/shared/result-type.ts</code>; must-use-result and prefer-pipe both import it. Behaviour-identical extraction — the existing must-use-result suite is the regression net.</li>
+          <li><strong><code>prefer-pipe</code> — "consecutive" defined operationally:</strong> an unwrap guard is an <code>IfStatement</code> whose test is <code>!x.ok</code> or <code>x.ok === false</code>, whose consequent is a single <code>return x;</code> (block or bare), and where <code>x</code>'s type passes <code>is_result_type</code>. Two guards in the same statement list separated by at most one statement (the declaration feeding the next guard — the <code>const y = ...; if (!y.ok) return y;</code> cadence) form a run; runs of length ≥ 2 report once on the first guard. No autofix, no suggestions — the message names <code>pipe()</code> and points at the corpus-patterns recipe. Other guard shapes (<code>return err(x.error)</code>, throw-in-tests) are deferred refinements.</li>
+          <li><strong><code>no-ambient-effects</code> — scope-verified syntactic matching:</strong> flag <code>Date.now()</code> calls, <code>new Date()</code> with zero arguments, and <code>Math.random()</code> calls only when <code>Date</code>/<code>Math</code> resolve to globals in ESLint's scope analysis (a local shadow doesn't flag). <code>new Date(x)</code> with arguments untouched. The allowlist is a <em>factory</em> option: <code>ambient_effect_files?: string[]</code> added to the Zod options schema; when present and non-empty the factory appends <code>{ files, rules: { "f0rbit/no-ambient-effects": "off" } }</code> AFTER <code>org_rules</code> and BEFORE caller <code>overrides</code> (so callers can still out-rank it). The rule itself takes no options.</li>
+          <li><strong><code>no-test-mocks</code> — no factory option.</strong> The user decision allowed "factory option or files-scoped override"; the standard consumer <code>overrides</code> mechanism already does files-scoped exemption with zero new schema surface, so no option is added. Flags: import specifiers <code>mock</code>, <code>spyOn</code>, <code>jest</code> from <code>"bun:test"</code>; call/member usage of those bindings (scope-resolved — a local function named <code>mock</code> doesn't flag); and global <code>jest.fn/spyOn/mock</code> member calls when <code>jest</code> is unresolved in scope (the trivial jest equivalent). Message points at in-memory fakes / the Provider pattern as the sanctioned double.</li>
+          <li><strong>Tier map:</strong> error — <code>must-use-result</code> (existing), <code>no-test-mocks</code>, <code>require-schema-at-boundary</code>, <code>consistent-type-definitions</code>, <code>no-console</code>; warn — <code>no-ambient-effects</code>, <code>prefer-pipe</code>. Warn-tier rules carry the graduation pattern from the v1 devpad rollout: rollout tasks append a graduation item to each repo's backlog rather than leaving warns silently permanent. All org-rule wiring stays in the single <code>org_rules</code> block (never preset-gated).</li>
+          <li><strong>Release mechanics:</strong> 0.2.0 after phase 1 (new error-tier rules = consumer-visible behaviour change; minor bump pre-1.0), 0.3.0 after phase 2. Each bump touches all five <code>package.json</code>s + <code>packages/eslint-plugin/src/index.ts</code> <code>meta.version</code>, and MUST <code>rm bun.lock &amp;&amp; bun install</code> in the same commit (documented 0.1.2 pack-version gotcha; the <code>tests/workspace.test.ts</code> packed-tarballs test is the CI gate). Tag <code>v*</code> on main → OIDC trusted publishing; no new packages, so no manual bootstrap needed.</li>
+          <li><strong>Rollout is one PR per repo</strong> — much lighter than v1's 3-PR recipe: formatting is already owned (no normalization step), repos are already lint-green on 0.1.5, so the delta is exactly the new rules. Sequence inside the PR: bump pin → survey (record per-rule counts in the PR body) → autofix interface→type → burn down or scope-override console/mock/boundary hits → graduation notes for warn tiers. Merge per repo settings: lint = squash-only, devpad = merge-commits-only, corpus = merge-commits-only (per its AGENTS.md), vault/pulse/ui = whatever their repo settings show.</li>
+          <li><strong>Decision 4 interplay guard:</strong> deleting corpus's return-annotation prose does NOT flip the factory's <code>@typescript-eslint/no-unnecessary-type-arguments: "off"</code> decision — existing explicit <code>Result&lt;T, CorpusError&gt;</code> annotations remain legal (design-philosophy still says annotate at boundaries; decision 4 only rejects a rule <em>mandating</em> them). The why-comment at the config site stays.</li>
+        </ul>
+      </section>
+
+      <section id="phases">
+        <h2>Phases</h2>
+        <p>Three sequential phases. Phase 1 runs five tasks in parallel worktrees then a verification/release close-out; phase 2 is sequential (rule → pilot → release); phase 3 runs five independent repo rollouts in parallel (separate repos — no worktrees needed). Every lint-repo phase ends with the standard close-out: merge worktrees, <code>bun run verify</code>, <code>CI=true bun test</code>, fill proof slots, write AGENTS.md entries, commit (clean conventional title — no phase/task/plan words), PR, <code>pr-shepherd</code> to merge.</p>
+        <svg viewBox="0 0 1040 200" xmlns="http://www.w3.org/2000/svg" style="max-width:100%; height:auto;">
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b949e"/>
+            </marker>
+          </defs>
+          <g font-family="-apple-system, sans-serif" font-size="12" fill="#c9d1d9">
+            <rect x="10" y="70" width="190" height="60" rx="8" fill="#161b22" stroke="#58a6ff"/>
+            <text x="105" y="92" text-anchor="middle">P1: cheap wins (5 ∥ tasks)</text>
+            <text x="105" y="110" text-anchor="middle" fill="#8b949e">→ release 0.2.0</text>
+            <rect x="250" y="70" width="200" height="60" rx="8" fill="#161b22" stroke="#58a6ff"/>
+            <text x="350" y="92" text-anchor="middle">P2: schema-at-boundary</text>
+            <text x="350" y="110" text-anchor="middle" fill="#8b949e">rule → corpus pilot → 0.3.0</text>
+            <rect x="510" y="10" width="130" height="30" rx="8" fill="#161b22" stroke="#30363d"/>
+            <text x="575" y="30" text-anchor="middle">P3: corpus</text>
+            <rect x="510" y="50" width="130" height="30" rx="8" fill="#161b22" stroke="#30363d"/>
+            <text x="575" y="70" text-anchor="middle">P3: vault</text>
+            <rect x="510" y="90" width="130" height="30" rx="8" fill="#161b22" stroke="#30363d"/>
+            <text x="575" y="110" text-anchor="middle">P3: pulse</text>
+            <rect x="510" y="130" width="130" height="30" rx="8" fill="#161b22" stroke="#30363d"/>
+            <text x="575" y="150" text-anchor="middle">P3: ui</text>
+            <rect x="510" y="170" width="130" height="30" rx="8" fill="#161b22" stroke="#30363d"/>
+            <text x="575" y="190" text-anchor="middle">P3: devpad</text>
+            <line x1="200" y1="100" x2="248" y2="100" stroke="#8b949e" marker-end="url(#arr)"/>
+            <line x1="450" y1="100" x2="508" y2="25" stroke="#8b949e" marker-end="url(#arr)"/>
+            <line x1="450" y1="100" x2="508" y2="65" stroke="#8b949e" marker-end="url(#arr)"/>
+            <line x1="450" y1="100" x2="508" y2="105" stroke="#8b949e" marker-end="url(#arr)"/>
+            <line x1="450" y1="100" x2="508" y2="145" stroke="#8b949e" marker-end="url(#arr)"/>
+            <line x1="450" y1="100" x2="508" y2="185" stroke="#8b949e" marker-end="url(#arr)"/>
+          </g>
+        </svg>
+
+        <section class="phase" id="phase-1">
+          <h3>Phase 1: Cheap wins in the lint repo → release 0.2.0</h3>
+          <p>Three syntactic-ish rules, two config changes, and the void-convention docs. Tasks 1.1–1.5 run in parallel worktrees. Tasks 1.1–1.3 all add one line to <code>packages/eslint-plugin/src/index.ts</code> and one line to the <code>org_rules</code> block in <code>packages/eslint-config/src/index.ts</code> — merge conflicts there are expected and trivial; the verification coder resolves them. Parallel coders do NOT run build/lint/test verification.</p>
+
+          <article class="task" id="task-1-1">
+            <header>
+              <h3>Task 1.1: Extract shared Result matcher + f0rbit/prefer-pipe</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/eslint-plugin/src/rules/shared/result-type.ts</code> (new), <code>packages/eslint-plugin/src/rules/prefer-pipe.ts</code> (new), <code>packages/eslint-plugin/src/rules/must-use-result.ts</code> (imports), <code>packages/eslint-plugin/src/index.ts</code> (+1 rule), <code>packages/eslint-config/src/index.ts</code> (org_rules +1), <code>packages/eslint-plugin/tests/prefer-pipe.test.ts</code> (new), <code>packages/eslint-plugin/tests/fixtures/result-decls.ts</code> (additive)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~360</dd>
+              <dt>Dependencies</dt>
+              <dd>none</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-1-2, task-1-3, task-1-4, task-1-5</dd>
+              <dt>Mode</dt>
+              <dd>coder (worktree)</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Repo <code>/Users/tom/dev/lint</code>, package <code>packages/eslint-plugin</code> (<code>@f0rbit/eslint-plugin</code>, rule namespace <code>f0rbit</code>). Rules are built with <code>ESLintUtils.RuleCreator&lt;RuleDocs&gt;</code> (<code>RuleDocs = { requiresTypeChecking: boolean }</code>, doc URL <code>https://github.com/f0rbit/lint/tree/main/packages/eslint-plugin#${name}</code>) — copy the pattern from <code>src/rules/must-use-result.ts</code>. That file contains the structural Result matcher this task extracts: <code>nullish_flags</code>, <code>boolean_literal_name</code>, <code>has_property</code>, <code>is_result_type</code> (union with literal-<code>ok</code> discriminant, a <code>true</code>+<code>value</code> arm and a <code>false</code>+<code>error</code> arm), and <code>peel_to_call</code>. Style: tabs (match <code>src/rules/*</code>), snake_case functions, PascalCase types, no classes, no new <code>as</code> casts inside <code>src/rules/</code> (adversaries flag any). Tests use <code>@typescript-eslint/rule-tester</code> under <code>bun test</code>: <code>clearCaches()</code> from <code>@typescript-eslint/parser</code> at module load (projectService is a per-process singleton), <code>RuleTester.afterAll/describe/it/itOnly</code> assigned from <code>bun:test</code> with <code>itOnly</code> wrapped in a function (bun's <code>it.only</code> getter throws under <code>CI=true</code>), fixtures dir <code>tests/fixtures/</code> with <code>result-decls.ts</code> read via <code>readFileSync</code> and prepended to every case's <code>code</code> (rule-tester cases are isolated virtual files; fixture-project globals do NOT leak), <code>projectService: { allowDefaultProject: ["*.ts"] }</code>, <code>tsconfigRootDir: fixtures_dir</code>. See <code>tests/must-use-result.test.ts</code> for the exact scaffold.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Create <code>src/rules/shared/result-type.ts</code> exporting <code>nullish_flags</code>, <code>boolean_literal_name</code>, <code>has_property</code>, <code>is_result_type</code>, <code>peel_to_call</code> — moved verbatim from <code>must-use-result.ts</code> (behaviour-identical). Update <code>must-use-result.ts</code> to import them (note NodeNext: relative imports need <code>.js</code> extensions).</li>
+                <li>Create <code>src/rules/prefer-pipe.ts</code>: rule <code>prefer-pipe</code>, <code>meta.type: "suggestion"</code>, <code>requiresTypeChecking: true</code>, messageId <code>prefer_pipe</code> ("N consecutive manual Result unwraps — compose these steps with pipe() instead."), <code>schema: []</code>, no fixer. Detection: for each statement list (Program / function bodies / blocks), identify unwrap guards — <code>IfStatement</code> whose test is <code>!x.ok</code> or <code>x.ok === false</code> (<code>x</code> an Identifier), whose consequent is exactly <code>return x;</code> (bare or single-statement block returning the same identifier), and where <code>services.getTypeAtLocation(x)</code> passes <code>is_result_type</code> (peel awaited type via <code>checker.getAwaitedType</code> like must-use-result does). Two guards separated by at most one intervening statement form a run; report ONCE on the first guard of any run with ≥ 2 guards. Single unwraps never report.</li>
+                <li>Wire: <code>src/index.ts</code> rules map gains <code>"prefer-pipe": prefer_pipe</code>; <code>packages/eslint-config/src/index.ts</code> <code>org_rules</code> block gains <code>"f0rbit/prefer-pipe": "warn"</code>.</li>
+                <li>Test suite <code>tests/prefer-pipe.test.ts</code> (reuse/extend <code>result-decls.ts</code> additively — it's shared with must-use-result, do not modify existing decls). Valid: single unwrap; two unwraps in <em>different</em> functions; two guards separated by ≥ 2 statements; guard returning a different identifier; guard on a non-Result union (<code>get_look_alike()</code> pattern); <code>x.ok === true</code> early-return shape. Invalid: classic <code>const a = f(); if (!a.ok) return a; const b = g(a.value); if (!b.ok) return b;</code> (1 report, on the first guard); three-guard chain (still 1 report); <code>x.ok === false</code> variant; async function with awaited Results.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && CI=true bun test packages/eslint-plugin</pre>
+              <p>Expected: new prefer-pipe suite green AND the existing must-use-result suite still fully green (the extraction regression net). Do NOT run repo-wide build/lint — parallel phase.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Zero new <code>as</code> casts inside <code>src/rules/</code> (the registry-boundary cast in the plugin index is the only sanctioned one).</li>
+                  <li>Matcher extraction is verbatim — no behaviour drift; must-use-result suite untouched and passing.</li>
+                  <li>Report count is exactly 1 per run (no cascade of reports for a 3-guard chain).</li>
+                  <li>Guard matching requires the SAME identifier in test and return — <code>if (!a.ok) return b;</code> does not count.</li>
+                  <li><code>itOnly</code> wrapped in a function (CI=true safe); <code>clearCaches()</code> present at module load.</li>
+                  <li>Relative imports carry <code>.js</code> extensions (NodeNext).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <ul>
+                <li>Merged from <code>v2/prefer-pipe</code> (<code>ec15dad</code>) into <code>v2/phase-1</code>. Extraction verified byte-for-byte against <code>main</code>'s pre-extraction <code>must-use-result.ts</code> (<code>nullish_flags</code>, <code>boolean_literal_name</code>, <code>has_property</code>, <code>is_result_type</code>, <code>peel_to_call</code> — identical logic, only moved and exported) — behaviour-identical, confirmed by diff.</li>
+                <li><code>tests/prefer-pipe.test.ts</code>: 10 cases (single unwrap; two unwraps in different functions; gap of two statements; wrong-identifier guard; non-Result union adjacent guard; <code>x.ok === true</code> success check; classic 2-guard chain (1 report, first guard); 3-guard chain (still 1 report); <code>x.ok === false</code> variant; async/awaited chain) — all green. <code>must-use-result.test.ts</code> unaffected, still green.</li>
+                <li>Adversary walk: <code>grep</code> confirms zero <code>as</code> casts in <code>src/rules/</code> (plugin-index cast is the only one, outside <code>src/rules/</code>); guard matcher requires the identifier in test and return to match (<code>match_guard</code>/<code>guard_test_identifier</code> in <code>prefer-pipe.ts</code>); <code>itOnly</code> wrapped in a function and <code>clearCaches()</code> called at module load in the test file; all relative imports carry <code>.js</code> extensions.</li>
+                <li>Full suite: 136 tests across 10 files green under <code>CI=true bun run verify</code> (typecheck + test + lint + fmt:check).</li>
+              </ul>
+            </section>
+          </article>
+
+          <article class="task" id="task-1-2">
+            <header>
+              <h3>Task 1.2: f0rbit/no-ambient-effects + ambient_effect_files factory option</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/eslint-plugin/src/rules/no-ambient-effects.ts</code> (new), <code>packages/eslint-plugin/src/index.ts</code> (+1 rule), <code>packages/eslint-config/src/index.ts</code> (org_rules +1, schema + derived override), <code>packages/eslint-plugin/tests/no-ambient-effects.test.ts</code> (new), <code>packages/eslint-config/tests/</code> (factory-option test)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~270</dd>
+              <dt>Dependencies</dt>
+              <dd>none</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-1-1, task-1-3, task-1-4, task-1-5</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast (worktree)</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Repo <code>/Users/tom/dev/lint</code>. Rule pattern: <code>ESLintUtils.RuleCreator&lt;RuleDocs&gt;</code> per <code>src/rules/must-use-result.ts</code>; this rule is SYNTACTIC (<code>requiresTypeChecking: false</code>, no parser services). Motivation (for the rule docs/message): ambient reads of time/randomness make code untestable against in-memory providers — the corpus backend-equivalence suite needed Date-precision special-casing purely because of ambient <code>new Date()</code> in production paths. The factory <code>define_lint_config</code> in <code>packages/eslint-config/src/index.ts</code> validates options with a Zod schema (<code>lint_options_schema</code>; <code>LintOptions = z.input&lt;...&gt;</code> is the exported source of truth), and returns a flat-config array where order is load-bearing: <code>global_ignores</code>, typed family, functional discipline, naming, tsx carve-out, import hygiene, commented code, <code>org_rules</code>, caller <code>overrides</code>, oxlint de-dupe LAST. Flat config resolves a rule per-file from the LAST matching config. Test style for the plugin: rule-tester scaffold from <code>tests/must-use-result.test.ts</code> but WITHOUT projectService (syntactic rule — plain parser options suffice); still assign <code>RuleTester.afterAll/describe/it/itOnly</code> from <code>bun:test</code> with <code>itOnly</code> wrapped in a function. Factory tests live in <code>packages/eslint-config/tests/</code> and assert over the returned config array.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Create <code>src/rules/no-ambient-effects.ts</code>: rule <code>no-ambient-effects</code>, <code>meta.type: "suggestion"</code>, messageId <code>ambient_effect</code> ("Ambient {{what}} makes this untestable — inject a clock/rng provider, or move this into a designated ambient-effect file (factory option ambient_effect_files)."), <code>schema: []</code>. Flag: (a) <code>Date.now()</code> CallExpression; (b) <code>NewExpression</code> <code>new Date()</code> with zero arguments; (c) <code>Math.random()</code> CallExpression. Each only when the base identifier (<code>Date</code>/<code>Math</code>) is unresolved to any local binding in ESLint scope analysis (i.e. resolves to the global) — use <code>context.sourceCode.getScope(node)</code> reference resolution. <code>new Date(x)</code> with args and property reads without calls do not flag.</li>
+                <li>Wire: plugin index gains <code>"no-ambient-effects": no_ambient_effects</code>; <code>org_rules</code> gains <code>"f0rbit/no-ambient-effects": "warn"</code>.</li>
+                <li>Factory option: add <code>ambient_effect_files: z.array(z.string()).min(1).optional()</code> to <code>lint_options_schema</code> with a comment explaining the designated-provider-files allowlist. In <code>define_lint_config</code>, when present, append <code>{ files: parsed.ambient_effect_files, rules: { "f0rbit/no-ambient-effects": "off" } }</code> AFTER <code>org_rules</code> and BEFORE <code>...(parsed.overrides ?? [])</code> so callers can still out-rank it.</li>
+                <li>Rule tests — valid: <code>new Date(timestamp)</code>; shadowed <code>Date</code>/<code>Math</code> (local <code>const Date = fake_date;</code> then <code>Date.now()</code>); <code>performance.now()</code> (not in scope of this rule); <code>Math.floor(x)</code>. Invalid: <code>Date.now()</code>, <code>new Date()</code>, <code>Math.random()</code>, each with the right <code>{{what}}</code> data.</li>
+                <li>Factory tests: (a) option present → array contains the derived off-block positioned after the org_rules block and before a supplied caller override; (b) option absent → no such block; (c) <code>LintOptions</code> accepts the new key (type-level compile check in the test file is fine).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && CI=true bun test packages/eslint-plugin/tests/no-ambient-effects.test.ts && CI=true bun test packages/eslint-config</pre>
+              <p>Expected: both suites green. Do NOT run repo-wide build/lint — parallel phase.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Shadowed <code>Date</code>/<code>Math</code> do NOT flag (scope resolution actually consulted, not name-matching).</li>
+                  <li>Derived off-block sits after <code>org_rules</code> and before caller overrides in the returned array (assert indices, not just presence).</li>
+                  <li>Zod schema remains the single source of truth — no hand-written duplicate of the options type.</li>
+                  <li>No <code>any</code>/<code>as</code> in the rule; rule declares <code>requiresTypeChecking: false</code>.</li>
+                  <li>Empty array is rejected by the schema (<code>.min(1)</code>) rather than emitting a match-nothing override.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <ul>
+                <li><strong>Adversary finding, fixed by the verification coder:</strong> merged from <code>v2/no-ambient-effects</code> (<code>8dd1952</code>) the implementation used pure name-matching (<code>node.callee.object.name === "Date"</code>) with NO scope resolution — a local shadow (an injected clock provider) would have incorrectly flagged, and no shadowed-case test existed. This violated the task's own spec ("only when the base identifier is unresolved to any local binding") and the adversary checklist's first item. Fixed by adding <code>packages/eslint-plugin/src/rules/shared/scope.ts</code> (<code>resolve_reference</code>, <code>is_unshadowed_global</code>, <code>imported_from</code> — the last shared with task 1.3's fix) and gating each of the three checks (<code>Date.now()</code>, <code>new Date()</code> zero-arg, <code>Math.random()</code>) on <code>is_unshadowed_global(scope, identifier)</code>.</li>
+                <li>Added 3 shadowed-case tests (local <code>const Date</code>, local <code>class Date</code>, function-param <code>Math</code>) — suite grew from 15 to 18 cases, all green.</li>
+                <li>Factory tests (<code>packages/eslint-config/tests/factory.test.ts</code>): 5 cases confirm the <code>ambient_effect_files</code> allowlist is present when supplied, positioned strictly after <code>org_rules</code> and before a supplied caller override (index-asserted, not just presence), absent when the option is omitted, and that an empty array is rejected by the <code>.min(1)</code> Zod constraint. <code>LintOptions = z.input&lt;typeof lint_options_schema&gt;</code> remains the single source of truth — no hand-written duplicate type.</li>
+                <li><strong>Gap beyond the assigned red flags:</strong> no end-to-end factory-level proof existed for this rule (every other phase-1 rule had one). Added <code>tests/fixtures/no-ambient-effects-fixture.ts</code> + a <code>lint-behaviour.test.ts</code> case firing <code>f0rbit/no-ambient-effects</code> through a real <code>define_lint_config()</code> output.</li>
+                <li>Full suite: 136 tests across 10 files green under <code>CI=true bun run verify</code>.</li>
+              </ul>
+            </section>
+          </article>
+
+          <article class="task" id="task-1-3">
+            <header>
+              <h3>Task 1.3: f0rbit/no-test-mocks</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/eslint-plugin/src/rules/no-test-mocks.ts</code> (new), <code>packages/eslint-plugin/src/index.ts</code> (+1 rule), <code>packages/eslint-config/src/index.ts</code> (org_rules +1), <code>packages/eslint-plugin/tests/no-test-mocks.test.ts</code> (new)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~240</dd>
+              <dt>Dependencies</dt>
+              <dd>none</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-1-1, task-1-2, task-1-4, task-1-5</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast (worktree)</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Repo <code>/Users/tom/dev/lint</code>. Rule pattern per <code>src/rules/must-use-result.ts</code> (RuleCreator, tabs, snake_case); SYNTACTIC rule (<code>requiresTypeChecking: false</code>). Motivation (for docs/message): the ecosystem's testing-strategy mandates in-memory fakes via the Provider pattern; <code>mock()</code>/<code>spyOn()</code> couple tests to implementation details — the v1 surveys found 90 discarded-Result test fixes across vault+devpad tracing back to mock-style test drift. Exemptions are config-scoped: consumers add a files-scoped override in their <code>eslint.config.ts</code> <code>overrides</code> (no factory option, no inline disables without description). Test scaffold: plain RuleTester (no projectService), <code>bun:test</code> hook assignment with wrapped <code>itOnly</code>, per <code>tests/must-use-result.test.ts</code>.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Create <code>src/rules/no-test-mocks.ts</code>: rule <code>no-test-mocks</code>, <code>meta.type: "problem"</code>, messageIds <code>mock_import</code> ("Importing {{name}} from bun:test — use an in-memory fake (Provider pattern) instead of a mock.") and <code>mock_usage</code> ("{{name}} couples this test to implementation details — use an in-memory fake instead."), <code>schema: []</code>.</li>
+                <li>Detection: (a) <code>ImportDeclaration</code> with source <code>"bun:test"</code> — flag each ImportSpecifier whose imported name is <code>mock</code>, <code>spyOn</code>, or <code>jest</code> (report <code>mock_import</code> on the specifier); (b) usages of those imported bindings — resolve via scope analysis (<code>context.sourceCode.getScope</code> / variable references) so a locally-defined <code>mock</code> function does NOT flag; flag CallExpressions (<code>mock(...)</code>, <code>spyOn(obj, "m")</code>) and member calls (<code>mock.module(...)</code>, <code>jest.fn()</code>, <code>jest.spyOn(...)</code>) reporting <code>mock_usage</code>; (c) the trivial jest-global equivalent: member calls <code>jest.fn/spyOn/mock/mocked</code> where <code>jest</code> has NO resolved binding in scope (a global) — flag as <code>mock_usage</code>.</li>
+                <li>Wire: plugin index gains <code>"no-test-mocks": no_test_mocks</code>; <code>org_rules</code> gains <code>"f0rbit/no-test-mocks": "error"</code>.</li>
+                <li>Tests — valid: importing <code>describe/it/expect/afterAll</code> from bun:test; a local function named <code>mock</code> defined and called; <code>const jest = my_helper; jest.fn()</code> (shadowed — no flag); importing <code>mock</code> from some other module (<code>"./mock.js"</code>). Invalid: <code>import { mock } from "bun:test"</code> (import flag) + <code>mock(() =&gt; {})</code> (usage flag); <code>import { spyOn } from "bun:test"</code> + <code>spyOn(console, "log")</code>; <code>import { jest } from "bun:test"</code> + <code>jest.fn()</code>; bare global <code>jest.spyOn(foo, "bar")</code> with no import; <code>mock.module("fs", ...)</code>.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && CI=true bun test packages/eslint-plugin/tests/no-test-mocks.test.ts</pre>
+              <p>Expected: suite green (≥ 9 cases). Do NOT run repo-wide build/lint — parallel phase.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Locally-defined or otherwise-imported <code>mock</code>/<code>jest</code> identifiers do NOT flag — detection is binding-resolved, not name-matched.</li>
+                  <li>Import flag and usage flag both fire for an imported-and-used mock (two reports, correct nodes).</li>
+                  <li>Aliased imports (<code>import { mock as m } from "bun:test"</code>) flag the import AND resolved usages of <code>m</code>.</li>
+                  <li>No <code>any</code>/<code>as</code>; <code>requiresTypeChecking: false</code> declared.</li>
+                  <li>Rule does not accidentally flag <code>vi</code>/vitest identifiers (out of scope this wave).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <ul>
+                <li><strong>Adversary findings, fixed by the verification coder:</strong> merged from <code>v2/no-test-mocks</code> (<code>1b06ea5</code>) the implementation had four gaps against its own spec and adversary checklist: (1) detection was pure name-matching with no scope resolution at all — a locally-defined <code>mock</code> function or a <code>mock</code> imported from elsewhere would have incorrectly flagged, and aliased imports (<code>mock as m</code>) would NOT have flagged usage (since the callee name would be <code>m</code>, not <code>mock</code>); (2) <code>jest</code> imported from <code>bun:test</code> was never flagged on the import specifier (only <code>mock</code>/<code>spyOn</code> were checked); (3) <code>mock.module(...)</code> member-call usage was never detected; (4) the rule wasn't parameterized with <code>RuleCreator&lt;RuleDocs&gt;</code>, so <code>requiresTypeChecking</code> was never declared.</li>
+                <li>Fixed via a full rewrite using the new <code>shared/scope.ts</code> helpers: <code>imported_from(variable, "bun:test")</code> resolves a call's callee back to the specific named import that bound it (alias-proof — the resolution walks the declaration site, not the identifier's surface name), and the bare-global <code>jest</code> path is now gated on <code>variable === undefined</code> (no declaration at all) rather than name alone, so a locally-declared <code>jest</code> shadow (<code>const jest = helper</code>) correctly does NOT flag. Added <code>bun_test_jest</code> and <code>call_jest_mocked</code> messageIds, <code>mock.module()</code> detection, and <code>requiresTypeChecking: false</code>.</li>
+                <li>Test suite rewritten: 21 cases (9 valid — including the locally-defined <code>mock</code> function, the shadowed <code>jest</code> local, a bare unresolved <code>mock()</code> with no import at all correctly NOT flagging, and a cross-module aliased import; 12 invalid — including the <code>jest</code> import, an aliased <code>mock as m</code> usage, the bare-global <code>jest.spyOn/mock/mocked</code> forms, and <code>mock.module()</code>). All green.</li>
+                <li><code>vi</code>/vitest confirmed out of scope (no handling present — the ecosystem is bun test only, per the plan's out-of-scope section).</li>
+                <li>Full suite: 136 tests across 10 files green under <code>CI=true bun run verify</code>.</li>
+              </ul>
+            </section>
+          </article>
+
+          <article class="task" id="task-1-4">
+            <header>
+              <h3>Task 1.4: Shared-config changes — consistent-type-definitions + no-console (+ dogfood overrides)</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/eslint-config/src/index.ts</code>, <code>packages/eslint-config/tests/</code> (de-dupe survival tests), <code>eslint.config.ts</code> (lint repo root — dogfood override)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~90</dd>
+              <dt>Dependencies</dt>
+              <dd>none</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-1-1, task-1-2, task-1-3, task-1-5</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast (worktree)</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>The factory <code>define_lint_config</code> (<code>packages/eslint-config/src/index.ts</code>) returns a flat-config array ending with <code>oxlint.buildFromOxlintConfigFile(...)</code> — the de-dupe block that disables every rule oxlint owns, applied LAST (last-matching-config wins per rule). Consequence: any rule we enable in the ESLint layer that oxlint's canonical config also enables would be silently disabled. oxlint 1.72.0 has both <code>typescript/consistent-type-definitions</code> (style category) and <code>no-console</code> (restriction category) available but OFF by default; the canonical <code>packages/oxlint-config/oxlintrc.json</code> (JSONC, carries decision-log comments) must be checked to confirm neither is enabled. Decision (recorded in this plan's Architecture decisions): both rules are ESLint-layer-owned so exceptions stay on the single consumer <code>overrides</code> surface and <code>eslint --fix</code> drives the interface→type burn-down. The existing test "drops the oxlint-off rule from the de-dupe..." in <code>packages/eslint-config/tests/</code> shows the pattern for asserting over the de-dupe interplay. The lint repo dogfoods its own config via root <code>eslint.config.ts</code>; <code>packages/lint/src/bin.ts</code> is a CLI (<code>f0rbit-lint</code>) whose console output is legitimate — CLI packages are the documented exemption class for the console ban.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>In the factory's typed-family rules block (or an adjacent ts-scoped block — either is fine, keep it alongside the other <code>@typescript-eslint</code> entries): add <code>"@typescript-eslint/consistent-type-definitions": ["error", "type"]</code> with a why-comment ("user decision 2026-07-05: type aliases over interfaces — one declaration form, no silent declaration merging"). Note it is NOT part of strictTypeChecked (it lives in stylistic) so it must be added explicitly.</li>
+                <li>Add <code>"no-console": "error"</code> (ESLint core rule, no allow-list — full ban) in a ts-scoped block with a why-comment ("services use structured logging; CLI packages + scripts exempt via per-repo overrides").</li>
+                <li>Verify the canonical <code>packages/oxlint-config/oxlintrc.json</code> does not enable <code>no-console</code> or <code>typescript/consistent-type-definitions</code> (it shouldn't — both off-by-default categories). Do NOT enable them there.</li>
+                <li>De-dupe survival tests in <code>packages/eslint-config/tests/</code>: build the full config via <code>define_lint_config</code>, resolve each of the two rules by last-matching-config semantics across the array, assert final severity is <code>error</code> (i.e. the oxlint de-dupe block does not contain an "off" entry for them). This guards against a future oxlint-config category change silently disabling either.</li>
+                <li>Dogfood: in the lint repo's root <code>eslint.config.ts</code>, add a files-scoped override <code>{ files: ["packages/lint/src/bin.ts"], rules: { "no-console": "off" } }</code> with a why-comment (CLI output is the product). Do NOT fix other dogfood violations in this task — the verification coder (task 1.6) sweeps the repo after merge.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && CI=true bun test packages/eslint-config</pre>
+              <p>Expected: existing factory tests + the two new de-dupe survival tests green. Do NOT run repo-wide lint — parallel phase (task 1.6 owns the dogfood sweep).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Both rules carry why-comments at the config site (the decision-log convention).</li>
+                  <li>De-dupe survival tests assert LAST-match resolution across the whole array, not just "rule appears somewhere".</li>
+                  <li>Canonical oxlintrc untouched (JSONC comments preserved; no accidental <code>JSON.parse</code> of it anywhere).</li>
+                  <li><code>no-console</code> has NO allow list (<code>["error"]</code> with no <code>{ allow: [...] }</code>) — decision 7 is a full ban.</li>
+                  <li>Dogfood override is files-scoped to <code>bin.ts</code> only, with a description comment.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <ul>
+                <li>Merged from <code>v2/config-tightenings</code> (<code>0f83f15</code>) — both rules carry a <code>// Decision log:</code> why-comment at the config site (grep-confirmed, matching the repo's existing decision-log convention exactly). <code>consistent-type-definitions</code> is <code>["error", "type"]</code>; <code>no-console</code> is the bare string <code>"error"</code> with no <code>{ allow: [...] }</code> — a full ban.</li>
+                <li>De-dupe survival: 3 new <code>factory.test.ts</code> cases use <code>effective_setting</code> (a <code>reduce</code> that walks the config array in order and keeps the LAST config defining the rule — genuine last-match-wins resolution, not "rule appears somewhere") and <code>collect_dedupe_rules</code> (merges only the trailing oxlint de-dupe configs) to assert both rules resolve to <code>error</code> AFTER the de-dupe block runs, and that neither rule appears inside the de-dupe block's own merged rules.</li>
+                <li><code>packages/oxlint-config/oxlintrc.json</code> confirmed untouched (<code>git diff main</code> clean); no accidental <code>JSON.parse</code> of it anywhere (grep clean).</li>
+                <li>Dogfood override in root <code>eslint.config.ts</code>: <code>{ files: ["packages/lint/src/bin.ts"], rules: { "no-console": "off" } }</code> with a description comment, scoped to that one file only.</li>
+                <li>2 new <code>lint-behaviour.test.ts</code> cases (<code>type-def-fixture.ts</code>, <code>console-fixture.ts</code>) prove both rules fire through the real <code>define_lint_config()</code> output, not just the unit-level factory array.</li>
+                <li>Full suite: 136 tests across 10 files green under <code>CI=true bun run verify</code>.</li>
+              </ul>
+            </section>
+          </article>
+
+          <article class="task" id="task-1-5">
+            <header>
+              <h3>Task 1.5: Docs — rule anchors + void-operator fire-and-forget convention</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/eslint-plugin/README.md</code>, <code>README.md</code> (repo root)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~150 (markdown)</dd>
+              <dt>Dependencies</dt>
+              <dd>none (writes from this plan's specs)</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-1-1, task-1-2, task-1-3, task-1-4</dd>
+              <dt>Mode</dt>
+              <dd>coder-fast (worktree)</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Every rule's <code>RuleCreator</code> doc URL points at <code>https://github.com/f0rbit/lint/tree/main/packages/eslint-plugin#&lt;rule-name&gt;</code> — so <code>packages/eslint-plugin/README.md</code> MUST have a heading anchor per rule. Phase 1 ships <code>prefer-pipe</code> (warn), <code>no-ambient-effects</code> (warn), <code>no-test-mocks</code> (error); phase 2 ships <code>require-schema-at-boundary</code> (error) — write its section now from the spec (sources: global <code>JSON.parse</code>, <code>.json()</code> on fetch-Body-like receivers; sanctioned: Zod <code>.parse/.safeParse</code> on a ZodType-typed receiver, flow into <code>unknown</code>-typed slots; <code>as</code>-casts flagged incl. <code>as unknown as T</code>; escape hatch: config-scoped overrides only) and mark it "available from 0.3.0". Decision 5 (docs-only convention): fire-and-forget async work is written <code>void do_thing()</code> — the <code>void</code> operator is the explicit discard marker; <code>@typescript-eslint/no-floating-promises</code> (already error in the factory) with its default <code>ignoreVoid: true</code> bans the bare call and accepts the void'd one. Critical nuance to document: this applies to <em>Promises</em>, NOT Results — <code>f0rbit/must-use-result</code> deliberately peels the <code>void</code> operator and still reports a void-discarded Result (<code>void get_result()</code> is an error); a <code>Result</code> can never be fire-and-forgotten. Repo README already documents the two-layer model + factory contract; keep additions in its existing style.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li><code>packages/eslint-plugin/README.md</code>: one section per rule (heading = exact rule name so the GitHub anchor matches the RuleCreator URL): what it flags, tier, type-aware or syntactic, 2–3 bad/good examples, the sanctioned alternative (pipe() / injected clock via <code>ambient_effect_files</code> / in-memory fakes / Zod parse), and the exemption mechanism (config-scoped overrides; <code>ambient_effect_files</code> factory option for no-ambient-effects).</li>
+                <li>Root <code>README.md</code>: add a "Conventions" subsection documenting the void-operator fire-and-forget convention (with the Promise-vs-Result nuance above) and the rule tier table (error: must-use-result, no-test-mocks, require-schema-at-boundary, consistent-type-definitions, no-console; warn + graduation: no-ambient-effects, prefer-pipe).</li>
+                <li>Update the factory-contract snippet in the root README to include <code>ambient_effect_files?</code>.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>grep -c '^#\{2,3\} ' /Users/tom/dev/lint/packages/eslint-plugin/README.md; grep -n 'void ' /Users/tom/dev/lint/README.md | head -5</pre>
+              <p>Expected: five rule sections present (4 new + must-use-result); void-convention section present. Markdown only — no code to test.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Heading text for each rule section anchor-matches the exact rule name (GitHub slugification of the RuleCreator URL fragment).</li>
+                  <li>Void-convention section states the Promise-vs-Result asymmetry explicitly (must-use-result peels <code>void</code>).</li>
+                  <li>require-schema-at-boundary section flagged "from 0.3.0" — no claim it ships in 0.2.0.</li>
+                  <li>Tier table matches the org_rules wiring severities exactly.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <ul>
+                <li><strong>Confirmed spec drift, fixed by the verification coder (this was the flagged red flag):</strong> merged from <code>v2/docs</code> (<code>d0500b0</code>), the docs coder never touched root <code>README.md</code> at all despite it being in this task's explicit file list — the Conventions subsection and the <code>ambient_effect_files</code> factory-snippet update were entirely missing. It also wrote two inaccurate bullets straight into <code>AGENTS.md</code> (out of this task's file scope): <code>no-ambient-effects</code> described as flagging "module-scope side effects" (the rule actually flags ambient <code>Date.now()</code>/<code>new Date()</code>/<code>Math.random()</code> — nothing about module scope), and the config tightenings described as "<code>no-floating-promises</code> void enforcement" + "<code>eslint-plugin-functional/no-promise-reject</code>" (neither exists anywhere in the plan or the merged code — the real tightenings are <code>consistent-type-definitions</code> and the full <code>no-console</code> ban).</li>
+                <li><code>packages/eslint-plugin/README.md</code>'s four new rule sections were ALL materially wrong, verified by re-reading the merged rule implementations directly: the <code>prefer-pipe</code> example didn't match the real if-guard detection at all; <code>no-ambient-effects</code> described module-scope mutations/subscriptions (a different rule entirely — the real rule never looks at module scope); <code>no-test-mocks</code> used a <code>vi.fn()</code> example — vitest, explicitly out of scope this wave, which the rule would never flag; <code>require-schema-at-boundary</code> was thin and vague versus the plan's detailed source/sink spec. Additionally every one of the 5 rule-section headings (including the pre-existing <code>must-use-result</code> one) used the form <code>f0rbit/name (vX.Y.Z)</code>, which breaks GitHub's heading-slug algorithm against the bare <code>#&lt;name&gt;</code> fragment the <code>RuleCreator</code> doc-URL actually builds.</li>
+                <li>Rewrote all 5 headings to the bare rule name; rewrote all 4 new sections with detection descriptions verified against the actual implementations (tier/type-aware/since metadata added), examples that match real rule behaviour, and the correct exemption mechanism per rule. Added the missing Conventions section (void-operator convention with the explicit Promise-vs-Result asymmetry) + rule tier table + updated factory-contract snippet to root <code>README.md</code>. Corrected the two inaccurate <code>AGENTS.md</code> bullets and added a new Gotchas entry documenting the shared scope-resolution helper pattern discovered while fixing tasks 1.2/1.3.</li>
+                <li>Verification commands re-run: <code>grep -c '^#{2,3} ' packages/eslint-plugin/README.md</code> → 7 (2 non-rule headings + 5 rule headings, all 5 rule headings anchor-correct); <code>grep -n 'void ' README.md</code> → now matches (previously zero, since root README was never touched). <code>require-schema-at-boundary</code> section explicitly reads "Since: 0.3.0 — not part of the 0.2.0 release."; tier table severities cross-checked against the merged <code>org_rules</code>/config-tightening wiring — exact match.</li>
+              </ul>
+            </section>
+          </article>
+
+          <article class="task" id="task-1-6">
+            <header>
+              <h3>Task 1.6: Verification, dogfood sweep, release 0.2.0</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd>worktree merges; <code>packages/*/package.json</code> ×5, <code>packages/eslint-plugin/src/index.ts</code> (meta.version), <code>bun.lock</code>, <code>AGENTS.md</code>, this plan file</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~40 authored</dd>
+              <dt>Dependencies</dt>
+              <dd>task-1-1 … task-1-5</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>verification (coder)</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Standard phase close-out for <code>/Users/tom/dev/lint</code> (squash-merge-only repo; commit/PR titles are plain conventional-commit descriptions — NEVER containing "phase", "task", or plan names). Tasks 1.1–1.3 each added one line to <code>packages/eslint-plugin/src/index.ts</code> and to the <code>org_rules</code> block — expect trivial merge conflicts there. Release gotchas (all documented in the repo AGENTS.md): a version bump = 5 package.json files + <code>meta.version</code> in the plugin index + <code>rm bun.lock &amp;&amp; bun install</code> in the SAME commit (bun caches workspace versions at lockfile-generation time; the <code>tests/workspace.test.ts</code> packed-tarballs test is the gate); <code>CI=true bun test</code> before pushing (bun's <code>it.only</code> getter throws under CI); publish is tag-triggered (<code>v*</code> on main) via npm Trusted Publishers OIDC — no tokens, no new packages this release so no bootstrap. The new rules apply to this repo's own source (dogfood): expect <code>no-console</code> hits outside <code>bin.ts</code> (fix or scope), possible interface→type conversions (<code>eslint --fix</code>), and warn-tier output from the new warn rules (acceptable — warns don't fail the gate; confirm <code>bun run lint</code>'s exit code semantics treat warnings as non-fatal, which eslint does by default without <code>--max-warnings</code>).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Merge the five worktrees; resolve the plugin-index / org_rules line conflicts (union of additions).</li>
+                <li>Dogfood sweep: <code>bun run verify</code> + <code>CI=true bun test</code>; fix any violations the new rules raise against this repo's own source (autofix interface→type; convert or scope any console usage outside <code>bin.ts</code>).</li>
+                <li>Run the per-task adversary checklists (tasks 1.1–1.5); fill their proof slots in this plan; set badges to done.</li>
+                <li>Bump lockstep version 0.1.5 → 0.2.0 (5 manifests + plugin <code>meta.version</code>), <code>rm bun.lock &amp;&amp; bun install</code>, confirm the packed-tarballs regression test passes.</li>
+                <li>Write the phase-1 entries from this plan's <code>agents-md-updates</code> into <code>/Users/tom/dev/lint/AGENTS.md</code>.</li>
+                <li>Commit (suggested title: <code>feat: add prefer-pipe, no-ambient-effects, no-test-mocks rules and console/type-definition config tightening</code>), push, open PR, hand to pr-shepherd. After squash-merge: <code>git tag v0.2.0 &amp;&amp; git push origin v0.2.0</code>; watch the release workflow to green; verify <code>npm view @f0rbit/lint version</code> → 0.2.0.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && bun run verify && CI=true bun test
+npm view @f0rbit/lint version   # after tag → expect 0.2.0</pre>
+              <p>Expected: verify green (typecheck + test + lint + fmt:check), CI-mode tests green, release workflow publishes all five packages at 0.2.0.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li><code>bun.lock</code> regenerated in the SAME commit as the version bump; packed-tarballs test green.</li>
+                  <li>Plugin <code>meta.version</code> says 0.2.0 (not just the manifests).</li>
+                  <li>org_rules block contains exactly 4 rules post-merge (must-use-result + the 3 new); severities match the tier map.</li>
+                  <li>Commit/PR title contains no phase/task/plan words.</li>
+                  <li><code>CI=true bun test</code> ran before push (itOnly gotcha).</li>
+                  <li>No parallel task's changes were lost in worktree merge (all 5 diffs represented).</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <ul>
+                <li>Merged 5 branches via <code>git merge --squash</code> in the specified order (<code>v2/prefer-pipe</code> → <code>v2/no-ambient-effects</code> → <code>v2/no-test-mocks</code> → <code>v2/config-tightenings</code> → <code>v2/docs</code>). Conflicts occurred exactly where predicted — <code>packages/eslint-plugin/src/index.ts</code> and <code>packages/eslint-config/src/index.ts</code> (rule-registration/<code>org_rules</code> lines, union of all additions kept) and <code>packages/eslint-config/tests/{factory,lint-behaviour}.test.ts</code> (union of all test additions kept). All 5 branches' diffs are represented — none lost.</li>
+                <li>Dogfood sweep: <code>bun run lint</code> was already clean against the merged repo's own source on the first pass — zero <code>no-console</code> hits outside <code>bin.ts</code>, zero stray <code>interface</code> declarations outside test fixtures (confirmed by targeted <code>grep</code> across <code>packages/*/src/</code>).</li>
+                <li>Two-item red-flag audit + full adversary sweep across all 5 tasks completed (see tasks 1.1–1.5 proof slots above for specifics) — both assigned red flags confirmed and fixed (docs spec drift; no-ambient-effects shadowing deferral, which the plan's own task-1.2 spec required, not permitted). Also fixed: no-test-mocks' equivalent scope-resolution gap (not explicitly named by the orchestrator but caught by the same adversary checklist item), the missing <code>jest</code>-import flag, missing <code>mock.module()</code>/<code>jest.mocked()</code> detection, and a missing end-to-end factory-level test for <code>no-ambient-effects</code>.</li>
+                <li>Cross-branch integration: new <code>tests/fixtures/combined-rules-fixture.ts</code> + one <code>lint-behaviour.test.ts</code> case fire <code>f0rbit/prefer-pipe</code>, <code>f0rbit/no-ambient-effects</code>, <code>f0rbit/no-test-mocks</code>, <code>@typescript-eslint/consistent-type-definitions</code>, and <code>no-console</code> simultaneously through one <code>define_lint_config()</code> output — all 5 present, proving <code>org_rules</code> ordering and the two config-tightening additions coexist correctly.</li>
+                <li><code>org_rules</code> block confirmed to contain exactly 4 rules post-merge (<code>must-use-result</code>: error, <code>prefer-pipe</code>: warn, <code>no-ambient-effects</code>: warn, <code>no-test-mocks</code>: error) — read directly from <code>packages/eslint-config/src/index.ts</code>, matches the tier map exactly.</li>
+                <li>Version bump: all 5 <code>package.json</code> files + <code>packages/eslint-plugin/src/index.ts</code>'s <code>meta.version</code> 0.1.5 → 0.2.0; <code>rm bun.lock &amp;&amp; bun install</code> regenerated the lockfile in the same unit of work; <code>tests/workspace.test.ts</code> packed-tarballs regression suite (6 tests) green.</li>
+                <li><code>CI=true bun run verify</code>: 136 tests across 10 files pass, <code>oxlint . &amp;&amp; eslint .</code> clean, <code>oxfmt --check .</code> clean.</li>
+                <li>Commit <code>16564cf</code> (<code>feat: add prefer-pipe, no-ambient-effects, no-test-mocks rules and console/type-definition config tightening</code>), branch <code>v2/phase-1</code>, PR <a href="https://github.com/f0rbit/lint/pull/10">#10</a>. Tagging <code>v0.2.0</code> and the npm publish happen after PR merge, not as part of this task.</li>
+              </ul>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-2">
+          <h3>Phase 2: require-schema-at-boundary → corpus pilot → release 0.3.0</h3>
+          <p>The hard type-aware rule gets its own phase: implement + exhaustive suite (2.1), then prove it against real code — the corpus checkout via the consumer-sim recipe — before it can ship (2.2), then release (2.3). Sequential; no worktrees.</p>
+
+          <article class="task" id="task-2-1">
+            <header>
+              <h3>Task 2.1: Implement f0rbit/require-schema-at-boundary</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/eslint-plugin/src/rules/require-schema-at-boundary.ts</code> (new), <code>packages/eslint-plugin/src/index.ts</code> (+1 rule), <code>packages/eslint-config/src/index.ts</code> (org_rules +1), <code>packages/eslint-plugin/tests/require-schema-at-boundary.test.ts</code> (new), <code>packages/eslint-plugin/tests/fixtures/boundary-decls.ts</code> (new), <code>packages/eslint-plugin/tests/fixtures/tsconfig.json</code> (lib), <code>packages/eslint-plugin/package.json</code> (zod devDep)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~320 rule + ~280 tests</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-1 complete (shared matcher module exists; 0.2.0 on npm)</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Repo <code>/Users/tom/dev/lint</code>, package <code>packages/eslint-plugin</code>. Type-aware rule built like <code>src/rules/must-use-result.ts</code>: <code>ESLintUtils.getParserServices(context)</code> → <code>services.program.getTypeChecker()</code>, structural type checks, no <code>as</code> casts inside the rule, <code>instanceof</code>-free AST narrowing via <code>AST_NODE_TYPES</code>. The shared peel helper lives at <code>src/rules/shared/result-type.ts</code> (from task 1.1) — reuse <code>peel_to_call</code>-style peeling but this rule needs its own expression peeler (await/parens/chain/<code>as unknown</code>). FULL SPEC (from this plan's Architecture decisions — implement exactly): <strong>Sources</strong>: (a) <code>JSON.parse(...)</code> where the callee's <code>JSON</code> resolves via the TypeChecker to the global <code>JSON</code> (checker symbol lookup, NOT name matching — local shadow must not flag); (b) <code>.json()</code> calls whose receiver type structurally has <code>json</code>, <code>text</code>, AND <code>headers</code> members (fetch-Body-like: lib.dom Response/Request, undici, workers-types, framework request wrappers — intentionally broad). NOT sources: D1/Drizzle rows, R2, KV (deferred). <strong>Sanctioned sinks</strong> (through await/paren/chain peels): sole argument of <code>.parse/.safeParse/.parseAsync/.safeParseAsync</code> on a receiver whose type has callable <code>parse</code> AND <code>safeParse</code> members (ZodType-like, structural — works for zod 3 and 4); flow into an explicitly-<code>unknown</code> slot (declared <code>const x: unknown</code>, parameter declared <code>unknown</code>, declared-<code>unknown</code> return, <code>as unknown</code> widening). <strong>Violations</strong>: member access, destructuring, computed access; <code>as T</code> casts (peel <code>as unknown</code> layers first — <code>as unknown as T</code> still flags, messageId <code>cast_boundary</code>); use in any other typed/inferred-any position (argument to non-unknown param, return, binary expression, template literal...), messageId <code>unvalidated_boundary</code>. <strong>Single-hop variable tracking</strong>: a boundary call initialising an un-annotated <code>const</code>/<code>let</code> makes that variable raw; judge each reference with the sink rules via ESLint scope analysis (<code>context.sourceCode.getScope</code>, variable references); re-assignment onward is a violation; an annotated <code>: unknown</code> declaration sanctions immediately; no transitive hops. <code>schema: []</code> — escape hatch is config overrides only. <code>requiresTypeChecking: true</code>. Test scaffold: same as must-use-result (clearCaches, bun:test hooks, wrapped itOnly, projectService allowDefaultProject ["*.ts"], fixtures prepend). Fixture notes: add <code>zod</code> (^3, matching the ecosystem peer range) as a devDependency of eslint-plugin and import it in <code>boundary-decls.ts</code> for real-fidelity ZodType receivers; hoisted linker surfaces it. Fixture tsconfig likely needs <code>"lib": ["ES2022", "DOM"]</code> so <code>Response</code>/<code>fetch</code> exist — the fixtures tsconfig is shared with the must-use-result suite, additive change only. If zod import into virtual default-project files proves unresolvable under projectService, fall back to a structural stub in <code>boundary-decls.ts</code> (declared <code>parse</code>+<code>safeParse</code> object) and record which path was used in the proof.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Implement the rule per the spec above. Suggested internals: <code>is_global_json_parse(checker, node)</code>, <code>is_fetch_body_receiver(checker, type)</code> (has_property × 3 via the shared module's helper), <code>is_zod_receiver(checker, type)</code> (callable <code>parse</code> + <code>safeParse</code>), <code>peel_passthrough(expr)</code> (await/paren/chain/<code>as unknown</code>), <code>judge_consumption(node)</code> returning sanctioned | violation(messageId), and the scope-analysis pass for raw variables.</li>
+                <li>Wire: plugin index + <code>org_rules</code> gains <code>"f0rbit/require-schema-at-boundary": "error"</code>.</li>
+                <li>Test suite — valid: <code>schema.parse(JSON.parse(s))</code>; <code>schema.safeParse(await res.json())</code>; <code>const raw: unknown = JSON.parse(s)</code> then narrowing via zod; passing <code>await res.json()</code> to <code>function ingest(input: unknown)</code>; <code>JSON.parse</code> on a shadowed local <code>JSON</code>; <code>.json()</code> on a non-Body receiver (object with only a <code>json</code> method); <code>z.string().parse(...)</code> receiver variants; <code>parseAsync</code>/<code>safeParseAsync</code>. Invalid: <code>JSON.parse(s).foo</code> (member access); <code>(await res.json()).items</code>; <code>JSON.parse(s) as Config</code> and <code>JSON.parse(s) as unknown as Config</code> (cast_boundary); <code>const data = JSON.parse(s); data.foo</code> (single-hop); <code>const data = await res.json(); return data;</code> (typed return); <code>const a = JSON.parse(s); const b = a;</code> (onward assignment); destructuring <code>const { x } = JSON.parse(s)</code>; passing to a typed parameter; <code>JSON.parse(JSON.stringify(x))</code> deep-clone idiom (documented as intentional).</li>
+                <li>Add the finished behaviour notes to the rule's README section from task 1.5 if reality diverged from the spec (keep docs truthful).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && CI=true bun test packages/eslint-plugin && bun run typecheck</pre>
+              <p>Expected: new suite green (≥ 20 cases covering every source × sink × violation combination above), all existing suites green, typecheck clean.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Zero <code>as</code> casts inside the rule implementation (structural checks only).</li>
+                  <li><code>as unknown as T</code> double-cast flags — the peeler doesn't create a hole.</li>
+                  <li>Shadowed <code>JSON</code> does not flag (checker-resolved global, not name match).</li>
+                  <li>Single-hop tracking: annotated <code>: unknown</code> sanctions; onward re-assignment flags; no transitive chase (bounded analysis).</li>
+                  <li>A receiver with <code>parse</code> but NOT <code>safeParse</code> (e.g. <code>Number.parseInt</code>-style objects) is NOT treated as a validator.</li>
+                  <li>Fixture tsconfig change is additive — must-use-result suite still green with DOM lib present.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder (include which zod fixture path was used: real dep or structural stub).</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-2-2">
+            <header>
+              <h3>Task 2.2: Corpus-consumer pilot — prove the rule on real code</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd>no committed consumer changes — throwaway wiring against <code>~/dev/corpus</code> (and a read-only survey of <code>~/dev/pulse</code>); rule fixes back into <code>packages/eslint-plugin/src/rules/require-schema-at-boundary.ts</code> + tests if FPs found</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~0–120 (tuning only)</dd>
+              <dt>Dependencies</dt>
+              <dd>task-2-1</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Before 0.3.0 ships, the boundary rule must run against real consumer code. Consumer-sim recipe for unpublished versions (documented in the lint repo AGENTS.md): <code>bun pm pack</code> every workspace package, then in the consumer install ONLY <code>@f0rbit/lint</code> via <code>file:</code> and map the sibling packages through <code>overrides</code> to their tarballs (the packed umbrella references lockstep versions not yet on npm). Hoisted linker + <code>"types": ["bun"]</code> requirements apply. Pilot target: <code>/Users/tom/dev/corpus</code> — already on <code>@f0rbit/lint</code> with a snake_case factory config; known probable hits: <code>backend/file.ts</code> (reads <code>_observations.json</code> via JSON.parse), <code>testing/vending/walker.ts</code> (reads <code>package.json</code> files). Do the wiring in a scratch worktree/branch of corpus and DISCARD it — the committed corpus changes happen in phase 3. Secondary read-only survey: run the same packed config against <code>/Users/tom/dev/pulse</code> (Workers repo — <code>Response.json()</code>/request-body patterns) to sample the fetch-Body detection in the wild. Acceptance bar: every corpus/pulse hit is a true positive (a genuinely unvalidated external read) or a documented-design case that phase 3 will scope-override; ZERO false positives of the "this isn't even a boundary" kind. Any FP → fix the rule + add a regression test in the lint repo, re-run.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Pack all five workspace packages; wire into a scratch corpus branch per the consumer-sim recipe; run <code>bunx eslint . 2&gt;&amp;1</code> and extract all <code>require-schema-at-boundary</code> diagnostics.</li>
+                <li>Classify every hit: TP-fix (corpus should Zod-parse — e.g. package.json reads could use a small schema), TP-override (documented design, phase-3 scoped override candidate), or FP (rule bug).</li>
+                <li>Repeat read-only against pulse (scratch branch, discard).</li>
+                <li>For each FP: minimal repro → regression test in the lint repo suite → rule fix → re-run the pilot until clean.</li>
+                <li>Deliverable: hit inventory (file:line, classification, phase-3 disposition) recorded in this task's proof slot AND carried into the phase-3 corpus/pulse task briefs (append to their context sections in this plan file).</li>
+                <li>Discard all consumer wiring (scratch branches deleted; corpus/pulse working trees clean).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/corpus && git status --porcelain   # empty — no leftover wiring
+cd /Users/tom/dev/lint && CI=true bun test packages/eslint-plugin</pre>
+              <p>Expected: consumer trees clean; lint-repo suite green including any new regression tests; hit inventory written into this plan.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Every FP fixed in the RULE (with a regression test), never by weakening the acceptance bar or pre-adding consumer overrides.</li>
+                  <li>Consumer repos left byte-clean (no stray package.json/lockfile edits committed).</li>
+                  <li>Hit inventory lists file:line + classification for EVERY diagnostic, not a summary count.</li>
+                  <li>The known corpus JSON.parse sites (file backend, vending walker) appear in the inventory — if they don't, the rule has a detection hole.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder (hit inventory + FP count trajectory).</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-2-3">
+            <header>
+              <h3>Task 2.3: Verification + release 0.3.0</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/*/package.json</code> ×5, <code>packages/eslint-plugin/src/index.ts</code> (meta.version), <code>bun.lock</code>, <code>AGENTS.md</code>, this plan file</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~30 authored</dd>
+              <dt>Dependencies</dt>
+              <dd>task-2-1, task-2-2</dd>
+              <dt>Parallelisable with</dt>
+              <dd>none</dd>
+              <dt>Mode</dt>
+              <dd>verification (coder)</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>Same close-out mechanics as task 1.6 (squash-only repo, clean titles, <code>CI=true bun test</code>, version bump = 5 manifests + plugin <code>meta.version</code> + <code>rm bun.lock &amp;&amp; bun install</code> same commit, tag → OIDC publish). Dogfood note: the lint repo's own source must be clean under the new boundary rule (the eslint-config factory reads config files — check <code>oxlint_dedupe</code>'s file loading; <code>buildFromOxlintConfigFile</code> is a library call, not JSON.parse, so should be clean).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li><code>bun run verify</code> + <code>CI=true bun test</code>; fix any dogfood hits from the boundary rule.</li>
+                <li>Run task 2.1/2.2 adversary checklists; fill proof slots; set badges done.</li>
+                <li>Bump 0.2.0 → 0.3.0 (5 manifests + meta.version + lockfile regen); packed-tarballs test green.</li>
+                <li>Write phase-2 agents-md-updates entries into <code>/Users/tom/dev/lint/AGENTS.md</code>.</li>
+                <li>Commit (suggested title: <code>feat: add require-schema-at-boundary rule enforcing zod validation of raw external data</code>), PR, pr-shepherd, tag <code>v0.3.0</code>, watch publish, verify npm.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/lint && bun run verify && CI=true bun test
+npm view @f0rbit/lint version   # after tag → expect 0.3.0</pre>
+              <p>Expected: all green; five packages at 0.3.0 on npm.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Release only after the pilot (task 2.2) inventory shows zero unresolved FPs.</li>
+                  <li>bun.lock regenerated in the bump commit; meta.version = 0.3.0.</li>
+                  <li>org_rules now carries all 5 f0rbit rules at the tier-map severities.</li>
+                  <li>Title clean of phase/task/plan words.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+
+        <section class="phase" id="phase-3">
+          <h3>Phase 3: Rollout — corpus, vault, pulse, ui, devpad</h3>
+          <p>Single PR per repo (much lighter than v1 — formatting already owned, repos already green on 0.1.5, so the delta is exactly the new rules). Per-repo sequence inside the one PR: <strong>(a)</strong> bump <code>@f0rbit/lint</code> to exact 0.3.0; <strong>(b)</strong> survey — run lint, record per-rule delta counts in the PR body; <strong>(c)</strong> <code>eslint --fix</code> for interface→type; <strong>(d)</strong> burn down console/mock/boundary hits for real, or add config-scoped overrides with why-comments per the exception-map convention; <strong>(e)</strong> set <code>ambient_effect_files</code> for genuine provider/clock modules; <strong>(f)</strong> append graduation notes for remaining warn-tier output (no-ambient-effects, prefer-pipe) to the repo's backlog/TODO; <strong>(g)</strong> update the repo's AGENTS.md lint section. All five tasks are independent repos — run in parallel, each shepherded to merge per that repo's merge settings (devpad + corpus = merge commits; lint = squash; vault/pulse/ui = per repo settings). Consumer repos do NOT need the bun.lock-regen dance (that's the lint monorepo's workspace-pack gotcha) — a normal <code>bun add -d -E</code> suffices.</p>
+
+          <article class="task" id="task-3-1">
+            <header>
+              <h3>Task 3.1: Rollout to corpus (+ AGENTS.md prose deletion)</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/corpus</code>: <code>package.json</code>, <code>eslint.config.ts</code>, <code>AGENTS.md</code>, source files (interface→type autofix; boundary/console fixes)</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~200 authored + autofix churn</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-2 complete (0.3.0 on npm)</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-3-2, task-3-3, task-3-4, task-3-5</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>corpus (<code>/Users/tom/dev/corpus</code>) is the Result-typed snapshot library, single package, snake_case preset, merges with MERGE COMMITS only (squash/rebase disabled — per its AGENTS.md). Known deltas to expect: <strong>interface→type</strong> — <code>backend/base.ts</code> (<code>MetadataStorage</code>, <code>DataStorage</code>, and handle interfaces) plus adapter/provider interfaces in <code>observations/storage.ts</code> and elsewhere — mechanical <code>eslint --fix</code>; watch for any interface used with declaration merging (must stay an interface via scoped override with description). <strong>no-console</strong> — <code>testing/registry.ts</code> auto-load warns + <code>testing/vending/</code> warns are DOCUMENTED design (degrade-to-console.warn pointing at <code>testing.load_from</code>; the corpus AGENTS.md documents this contract): add a files-scoped override for those paths with a why-comment; do NOT redesign the warn UX. <code>scripts/</code> (e.g. <code>generate-llm-docs.js</code>) are scripts — exempt via override. <strong>require-schema-at-boundary</strong> — the task-2-2 pilot inventory (see its proof slot + any notes appended here) lists the hits: expected <code>backend/file.ts</code> <code>_observations.json</code> reads and <code>testing/vending/walker.ts</code> package.json reads; fix with small Zod schemas where the shape is known, scope-override where the pilot classified TP-override. <strong>no-test-mocks</strong> — corpus tests use fakes already; expect ~zero hits. <strong>no-ambient-effects (warn)</strong> — corpus generates timestamps/versions internally (<code>utils.ts</code> <code>generate_version</code>, SnapshotMeta timestamps): either designate the genuine clock/id modules via <code>ambient_effect_files</code> in the factory call, or leave warns with a graduation note; don't churn the API. <strong>Decision 4 (MUST)</strong>: DELETE the AGENTS.md line "All public functions returning a Result should declare it explicitly — no inference of <code>Result&lt;...&gt;</code> return types." (Conventions → Error handling section) — superseded: inference wins; do NOT mass-remove existing annotations (they stay legal). Also update the AGENTS.md active-plans list if it references lint plans. corpus has an in-flight feature branch — branch from main, don't touch it.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li><code>bun add -d -E @f0rbit/lint@0.3.0</code>; run <code>bun run lint</code>; record per-rule counts in the PR body (survey first).</li>
+                <li><code>bunx eslint --fix .</code> for interface→type; manually review merge-sensitive interfaces; <code>bun run typecheck &amp;&amp; bun test</code> after.</li>
+                <li>Handle console/boundary/mock hits per the context above (fix &gt; override; overrides files-scoped with why-comments in <code>eslint.config.ts</code>).</li>
+                <li>Add <code>ambient_effect_files</code> to the factory call only for genuine clock/rng/id-generation modules; graduation notes for the rest into the corpus backlog (README TODO or AGENTS.md-adjacent backlog).</li>
+                <li>Delete the return-annotation prose line from AGENTS.md; add/refresh the lint-section notes (new rules active, override map + reasons).</li>
+                <li>One PR; merge-commit per repo settings; all gates green (<code>bun run lint</code>, <code>fmt:check</code> if wired, <code>bun test</code>, <code>bun run typecheck</code>).</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/corpus && bun run lint && bun test && bun run typecheck
+grep -c "declare it explicitly" AGENTS.md   # expect 0</pre>
+              <p>Expected: lint green (warn-tier output acceptable), tests + typecheck green, prose line gone.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>testing/registry + vending warn UX unchanged (override, not redesign); why-comment present.</li>
+                  <li>Boundary fixes use Zod parses, not <code>as</code> casts; no new <code>any</code>.</li>
+                  <li>Interface→type conversions compile AND <code>bun test</code> passes (JSDoc <code>@example</code> blocks on converted types survive — llms.txt extracts from them).</li>
+                  <li>AGENTS.md deletion is surgical — only the return-annotation sentence; surrounding Result conventions intact.</li>
+                  <li>Existing explicit <code>Result&lt;T, E&gt;</code> return annotations NOT mass-removed.</li>
+                  <li>PR merged with a merge commit (repo setting) and a clean conventional title.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder (PR#, per-rule delta counts, override map).</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-3-2">
+            <header>
+              <h3>Task 3.2: Rollout to vault</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/vault</code>: <code>package.json</code>, <code>eslint.config.ts</code>, <code>AGENTS.md</code>, source fixes</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~80 authored + autofix churn</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-2 complete</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-3-1, task-3-3, task-3-4, task-3-5</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>vault (<code>/Users/tom/dev/vault</code>) is the API-key-broker Cloudflare Worker — small codebase, camelCase preset, security boundary (zero-trust identity code must stay semantically untouched), already lint-green on 0.1.5 with the v1 recipe. Expected deltas: <strong>require-schema-at-boundary</strong> — vault brokered upstream calls parse JSON responses; every hit here is high-value (it IS the trust boundary) — fix with Zod schemas, never overrides, unless the pilot inventory says otherwise; <strong>no-console</strong> — vault is a service: console hits become structured logging (its pulse-emit path) or are burned down, no blanket override; <strong>no-test-mocks</strong> — v1 already fixed 25 discarded-Result test issues here, mocks may lurk in tests — replace with fakes or files-scope narrowly with justification; <strong>interface→type</strong> autofix; <strong>warn tiers</strong> — graduation notes to the repo backlog. Standard per-repo sequence from the phase-3 intro applies (bump → survey → autofix → burn down → ambient files → graduation → AGENTS.md), single PR, merge per repo settings.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Run the phase-3 recipe against vault; survey counts into the PR body.</li>
+                <li>Boundary hits: Zod schemas at the upstream-response edges (this repo's raison d'être — no override shortcuts).</li>
+                <li>Console hits: route through vault's structured logging/pulse emission; do not add an allow-list.</li>
+                <li>AGENTS.md: new-rules section + override map.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/vault && bun run lint && bun run fmt:check && bun test && bun run typecheck</pre>
+              <p>Expected: all green; CI on the PR passes the existing gate with the new rules active.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Zero <code>require-schema-at-boundary</code> overrides in vault (fixes only) — or an explicit documented reason per exception.</li>
+                  <li>Zero-trust identity code semantically untouched (diff review of auth paths).</li>
+                  <li>No new <code>any</code>/<code>as</code> introduced by fixes.</li>
+                  <li>Graduation notes exist for every remaining warn.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-3-3">
+            <header>
+              <h3>Task 3.3: Rollout to pulse</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/pulse</code>: <code>package.json</code>, <code>eslint.config.ts</code>, <code>AGENTS.md</code>, source fixes</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~120 authored + autofix churn</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-2 complete</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-3-1, task-3-2, task-3-4, task-3-5</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>pulse (<code>/Users/tom/dev/pulse</code>) is the observability ingest/query Worker. HARD constraints from v1 + memory: production worker name is exactly <code>pulse-api</code> (service bindings depend on it) — <code>infra.ts</code> must stay semantically untouched; CI pins Bun 1.3.13 (1.3.14 segfaults) — preserve if touching workflows. Expected deltas: <strong>require-schema-at-boundary</strong> — ingest paths call <code>request.json()</code>; the v1 survey flagged <code>env.BUCKET as any</code> (boundary-trust evidence) — ingest payloads get Zod schemas (pulse likely has event schemas already — reuse, single source of truth); the task-2-2 pilot's pulse survey (see its proof) pre-lists the hits. <strong>no-console</strong> — pulse IS the logging service; its own diagnostics should use its structured path; burn down or narrowly override with why-comments. <strong>no-ambient-effects</strong> — ingest timestamps are genuine clock reads: designate the clock/id module(s) via <code>ambient_effect_files</code> rather than sprinkling warns. <strong>interface→type</strong> autofix — watch Workers <code>Env</code>/module augmentations (generated d.ts usually excluded; source-level <code>declare</code> merges must stay interfaces via scoped override). Standard phase-3 recipe, single PR, merge per repo settings.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Run the phase-3 recipe; survey counts into the PR body.</li>
+                <li>Boundary: Zod-parse ingest payloads with existing event schemas where available.</li>
+                <li>Designate clock/id provider modules in <code>ambient_effect_files</code>; graduation notes for the rest.</li>
+                <li>Verify <code>infra.ts</code> diff is empty (or config-only); Bun pin intact.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/pulse && bun run lint && bun run fmt:check && bun test && bun run typecheck
+git diff main --stat -- infra.ts   # expect empty</pre>
+              <p>Expected: all green; <code>infra.ts</code> untouched; CI (Bun 1.3.13) green on the PR.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Worker name <code>pulse-api</code> appears in zero diffs.</li>
+                  <li>Boundary fixes reuse existing event Zod schemas where they exist (no duplicate shape definitions).</li>
+                  <li><code>declare</code>-merged interfaces excluded from the type-definitions conversion via scoped override, not inline disables.</li>
+                  <li>Bun 1.3.13 pin intact if workflows touched.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-3-4">
+            <header>
+              <h3>Task 3.4: Rollout to ui</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/ui</code>: <code>package.json</code>, <code>eslint.config.ts</code>, <code>AGENTS.md</code>, source fixes</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~80 authored + autofix churn</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-2 complete</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-3-1, task-3-2, task-3-3, task-3-5</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>ui (<code>/Users/tom/dev/ui</code>) is the PUBLISHED component library <code>@f0rbit/ui</code> (camelCase preset, JSX/TSX). Biggest delta: <strong>interface→type</strong> — component prop interfaces convert mechanically, BUT this is a published library: converting an <em>exported</em> interface breaks any consumer doing <code>declare module</code> augmentation or <code>interface extends</code>-merging against it. Survey exported interfaces first; if none are documented/intended for augmentation, convert all and note the (pre-1.0) type-level change in the PR body; keep any deliberate augmentation points as interfaces via a scoped override with a why-comment. <strong>no-console</strong> — components shouldn't log; docs-site build scripts are scripts (exempt via override). <strong>no-ambient-effects</strong> — animation/id-generation helpers using <code>Math.random()</code> for keys are a legit designation target for <code>ambient_effect_files</code> or a fix (stable id props). <strong>require-schema-at-boundary / no-test-mocks</strong> — expect near-zero. Zero export RENAMES (unchanged v1 rule). Standard phase-3 recipe, single PR, merge per repo settings; run the library build as an extra gate.</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Run the phase-3 recipe; survey counts into the PR body.</li>
+                <li>Interface conversion with the exported-surface review above; <code>bun run build</code> and diff the public d.ts surface before/after.</li>
+                <li>AGENTS.md: new-rules section + override map.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/ui && bun run lint && bun run fmt:check && bun test && bun run typecheck && bun run build</pre>
+              <p>Expected: all green including the library build; exported value surface identical (types may change interface→type — noted in PR body).</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li>Zero export renames; value-level public API identical.</li>
+                  <li>Deliberate augmentation-point interfaces (if any) preserved via scoped override with why-comment.</li>
+                  <li>d.ts surface diff reviewed and summarised in the PR body.</li>
+                  <li>Docs site still builds post-changes.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+
+          <article class="task" id="task-3-5">
+            <header>
+              <h3>Task 3.5: Rollout to devpad</h3>
+              <span class="badge todo">todo</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/devpad</code> (monorepo): root <code>package.json</code>, <code>eslint.config.ts</code>, <code>AGENTS.md</code>, per-package source fixes</dd>
+              <dt>Estimated LOC</dt>
+              <dd>~250 authored + autofix churn (largest repo)</dd>
+              <dt>Dependencies</dt>
+              <dd>phase-2 complete (benefits from 3.1–3.4 learnings if serialised, but may run parallel)</dd>
+              <dt>Parallelisable with</dt>
+              <dd>task-3-1, task-3-2, task-3-3, task-3-4</dd>
+              <dt>Mode</dt>
+              <dd>coder</dd>
+            </dl>
+            <section data-kind="context">
+              <h4>Context (self-contained)</h4>
+              <p>devpad (<code>/Users/tom/dev/devpad</code>) is the largest consumer: bun-workspaces monorepo (<code>packages/pipelines</code>, <code>pipeline-templates</code>, <code>cli</code>, <code>api</code>, <code>apps/main</code> Astro), root factory config, Astro excluded from the typed layer, <code>scaffolder/templates/</code> excluded from fmt (template output fidelity — also exclude from the new rules' churn: template files are scaffold OUTPUT, only change them deliberately, and if the scaffolded eslint.config template should carry new-option examples, that's a content decision not an autofix). MERGE COMMITS ONLY on this repo. Known context: v1 left a phased warn-tier graduation plan (naming + unsafe-*) tracked in devpad's own backlog — this rollout APPENDS new graduation items (no-ambient-effects, prefer-pipe) to the same mechanism rather than inventing a new one; 65 discarded-Result test fixes landed in v1 (test rigor precedent); <code>packages/cli</code> is a CLI — files-scoped <code>no-console</code> override for its output paths (decision 7's CLI exemption); <code>@devpad/api</code> must keep its explicit <code>drizzle-orm</code> dep (phantom-dep gotcha). Expected big deltas: interface→type across packages (watch <code>declare module</code>/Astro augmentations); console in scripts (override) and services (burn down); <code>.json()</code> boundary hits in api/pipelines HTTP paths (Zod schemas exist across devpad — reuse; the 554 no-unsafe-assignment warn backlog is CONTEXT, not this wave's target). Standard phase-3 recipe, single PR (large but mechanical; survey-first keeps it honest).</p>
+            </section>
+            <section data-kind="what">
+              <h4>What to do</h4>
+              <ul>
+                <li>Run the phase-3 recipe at the devpad root; per-rule per-package survey counts in the PR body.</li>
+                <li>Autofix interface→type workspace-wide; scoped overrides for genuine augmentation interfaces; typecheck + full test suite after.</li>
+                <li>CLI console override (files-scoped to the CLI's output modules); service console burned down to structured logging.</li>
+                <li>Boundary hits fixed with existing Zod schemas where available; new small schemas otherwise; pilot-style inventory if count is large.</li>
+                <li>Graduation items appended to devpad's existing warn-tier graduation tracking; AGENTS.md updated.</li>
+                <li>Verify CLI smoke: <code>bun packages/cli/src/index.ts --help</code>.</li>
+              </ul>
+            </section>
+            <section data-kind="verification">
+              <h4>Verification</h4>
+              <pre>cd /Users/tom/dev/devpad && bun run lint && bun run fmt:check && bun test && bun run typecheck
+bun packages/cli/src/index.ts --help</pre>
+              <p>Expected: all green across the workspace; CLI smoke passes; scaffolder templates byte-identical unless deliberately updated.</p>
+            </section>
+            <section data-kind="adversary">
+              <h4>Adversary checklist</h4>
+              <div class="adversary">
+                <ul>
+                  <li><code>scaffolder/templates/</code> not churned by autofix (byte-compare; deliberate template updates are separate, explained commits).</li>
+                  <li><code>drizzle-orm</code> still in <code>@devpad/api</code> deps.</li>
+                  <li>Graduation items land in the EXISTING devpad graduation mechanism, not a new ad-hoc list.</li>
+                  <li>CLI console override scoped to output modules, not the whole package blindly.</li>
+                  <li>Merged with a merge commit (repo is merge-only); clean title.</li>
+                </ul>
+              </div>
+            </section>
+            <section data-kind="proof">
+              <h4>Proof</h4>
+              <div class="empty-proof">To be filled by verification coder.</div>
+            </section>
+          </article>
+        </section>
+      </section>
+
+      <section id="breaking">
+        <h2>Breaking changes</h2>
+        <ul>
+          <li><strong>BREAKING (0.2.0):</strong> <code>f0rbit/no-test-mocks</code> (error), <code>no-console</code> (error, full ban), <code>consistent-type-definitions</code> (error) — consumers bumping the pin go red until burn-down; phase 3 is that burn-down. Consumers on 0.1.5 are unaffected until they bump (exact pins everywhere).</li>
+          <li><strong>BREAKING (0.3.0):</strong> <code>f0rbit/require-schema-at-boundary</code> (error) — same containment via exact pins + phase-3 burn-down.</li>
+          <li><strong>BREAKING (convention):</strong> corpus AGENTS.md's "All public functions returning a Result should declare it explicitly" is DELETED (decision 4 — inference wins). Existing annotations stay legal; no rule enforces either direction.</li>
+          <li><strong>BREAKING (types, ui only):</strong> exported prop interfaces become type aliases — consumers augmenting/merging those interfaces would break. Surveyed in task 3.4; pre-1.0 accepted, noted in that PR body.</li>
+          <li>No runtime behaviour changes anywhere; no export renames (unchanged v1 rule).</li>
+        </ul>
+      </section>
+
+      <section id="out-of-scope">
+        <h2>Out of scope</h2>
+        <ul>
+          <li><strong>Deep-import boundaries rule</strong> (ban reaching into package internals / wrong subpaths — evidence: pulse example wrong-subpath import). Considered for this wave, deferred to a future wave.</li>
+          <li><strong>Fixtures-from-<code>testing.arb()</code> adoption</strong> — NOT a lint concern; motivation: devpad e2e <code>github_id: NULL</code> stale-fixture incident. Suggest as its own future plan (corpus testing-substrate consumers generate fixtures instead of hand-writing them).</li>
+          <li><strong>D1/R2/KV row validation as <code>require-schema-at-boundary</code> sources</strong> — phase-in candidate once the JSON/fetch sources have proven FP-free in production use.</li>
+          <li><strong><code>no-ambient-effects</code> graduation warn → error</strong> — after the ecosystem has provider/clock modules designated and warn counts reach ~0.</li>
+          <li><strong><code>prefer-pipe</code> refinements</strong> — additional guard shapes (<code>return err(x.error)</code>), autofix/suggestions, and a possible <code>JSON.parse(JSON.stringify(...))</code> deep-clone carve-out in the boundary rule.</li>
+          <li><strong>Multi-hop data-flow tracking</strong> in <code>require-schema-at-boundary</code> — v1 is deliberately single-hop; revisit only with real evasion evidence from rollout.</li>
+          <li><strong>vitest/<code>vi</code> equivalents in <code>no-test-mocks</code></strong> — no vitest in the ecosystem (bun test only); add only if that changes.</li>
+        </ul>
+      </section>
+
+      <section id="agents-md-updates">
+        <h2>AGENTS.md updates</h2>
+        <p>Audit trail — the verification coder of each phase writes these into the named repo's <code>AGENTS.md</code> directly.</p>
+        <ul>
+          <li><strong>lint repo (phase 1):</strong> shared structural matcher lives at <code>packages/eslint-plugin/src/rules/shared/result-type.ts</code> — new type-aware rules import it, never re-implement; rule tier map (error: must-use-result, no-test-mocks, require-schema-at-boundary, consistent-type-definitions, no-console; warn + graduation: no-ambient-effects, prefer-pipe); factory contract gains <code>ambient_effect_files?: string[]</code> (derived off-block placed after org_rules, before caller overrides); config-change placement rule: rules oxlint also implements but has off-by-default MUST get a de-dupe-survival test when enabled in the ESLint layer; the plugin README is load-bearing (RuleCreator doc URLs anchor into it — every new rule needs a heading-anchored section); <code>.plans/lint-rules-v2.html</code> is the active plan.</li>
+          <li><strong>lint repo (phase 2):</strong> require-schema-at-boundary spec summary (sources: global JSON.parse + fetch-Body-like <code>.json()</code>; sinks: structural ZodType parse/safeParse + <code>unknown</code> slots; single-hop variable tracking; <code>as unknown as T</code> peeling); pilot-before-release precedent for type-aware rules (consumer-sim against corpus, zero-FP bar); zod devDep in eslint-plugin exists for boundary-rule fixtures only (or the structural-stub fallback, per what shipped).</li>
+          <li><strong>corpus (phase 3):</strong> return-annotation prose DELETED per user decision — inference is the default, boundary annotations optional; console override map (testing/registry + vending + scripts) with the do-not-redesign note; boundary-rule fixes/overrides map; <code>ambient_effect_files</code> designations if any.</li>
+          <li><strong>vault / pulse / ui / devpad (phase 3):</strong> per-repo new-rules section — per-rule delta counts at adoption, override map + reasons, graduation items location; pulse: clock/id modules designated in <code>ambient_effect_files</code>; ui: interface→type d.ts surface note; devpad: graduation items appended to the existing v1 mechanism.</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

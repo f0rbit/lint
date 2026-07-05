@@ -35,6 +35,7 @@ export default define_lint_config({
 	naming: "snake_case", // or "camelCase" — function-name preset
 	package_name: "@f0rbit/corpus", // optional: bans importing your own package name
 	tsconfig_root_dir: import.meta.dirname,
+	ambient_effect_files: [], // optional: files exempt from f0rbit/no-ambient-effects (e.g. clock/rng providers)
 	overrides: [], // repo-specific files-scoped exceptions, spliced in before the oxlint de-dupe
 });
 ```
@@ -79,6 +80,37 @@ if (get_result().ok) log(result); // ✓ inspected
 ```
 
 Intentional discards are config-scoped like every other exception: a `files`-scoped block in `overrides` setting `"f0rbit/must-use-result": "off"`, or a described `eslint-disable-next-line f0rbit/must-use-result -- reason` for a one-off.
+
+Four more org rules ship from 0.2.0 (`f0rbit/prefer-pipe`, `f0rbit/no-ambient-effects`, `f0rbit/no-test-mocks`) and 0.3.0 (`f0rbit/require-schema-at-boundary`) — full docs (what each flags, sanctioned alternative, exemption mechanism) live in [`packages/eslint-plugin/README.md`](packages/eslint-plugin/README.md#rules).
+
+## Conventions
+
+**Fire-and-forget promises are marked with `void`.** `@typescript-eslint/no-floating-promises` is error-tier with its default `ignoreVoid: true`: a bare floating promise is flagged, but wrapping it in `void` is the explicit, sanctioned discard marker.
+
+```ts
+void emit_telemetry(); // ✓ Promise, explicitly discarded — fire-and-forget
+emit_telemetry(); // ✗ floating Promise — no-floating-promises
+```
+
+This convention applies to **Promises only, never to `Result`s**: `f0rbit/must-use-result` deliberately peels the `void` operator and still reports a void-discarded Result, because the error arm of a `Result` has nowhere else to go — a `Result` can never be fire-and-forgotten.
+
+```ts
+void get_result(); // ✗ still an error — void does not hide the error arm
+```
+
+**Rule tier map:**
+
+| Tier              | Rule                                             | Type-aware | Since |
+| ----------------- | ------------------------------------------------ | ---------- | ----- |
+| error             | `f0rbit/must-use-result`                         | yes        | 0.1.0 |
+| error             | `f0rbit/no-test-mocks`                           | no         | 0.2.0 |
+| error             | `f0rbit/require-schema-at-boundary`              | yes        | 0.3.0 |
+| error             | `@typescript-eslint/consistent-type-definitions` | n/a        | 0.2.0 |
+| error             | `no-console`                                     | n/a        | 0.2.0 |
+| warn (graduating) | `f0rbit/no-ambient-effects`                      | no         | 0.2.0 |
+| warn (graduating) | `f0rbit/prefer-pipe`                             | yes        | 0.2.0 |
+
+Warn-tier rules carry a graduation plan: consumer rollouts record a backlog item to burn the warn count to zero and flip severity to `error` once the ecosystem has adopted the sanctioned alternative — see each consumer repo's `AGENTS.md`.
 
 ## Version-pinning policy
 

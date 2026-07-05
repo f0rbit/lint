@@ -13,5 +13,10 @@ export default define_lint_config({
 			files: ["tests/**", "packages/*/tests/**"],
 			rules: { "functional/no-throw-statements": "off" },
 		},
+		{
+			// CLI entrypoint uses console.error for errors and console.log for user messaging
+			files: ["packages/lint/src/bin.ts"],
+			rules: { "no-console": "off" },
+		},
 	],
 });
