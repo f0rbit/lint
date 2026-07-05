@@ -13,7 +13,7 @@ Monorepo housing all lint + format configuration for the f0rbit ecosystem. Five 
 │   ├── eslint-plugin/    # custom typed org rules (f0rbit/must-use-result)
 │   └── lint/             # umbrella: tool pins + f0rbit-lint bin + factory re-export
 ├── tests/                # root workspace-integrity tests
-├── .plans/               # HTML plans (linting-strategy.html is the active plan)
+├── .plans/               # HTML plans (linting-strategy.html completed; all phases shipped)
 └── .github/workflows/    # ci.yml (verify) + release.yml (tag-triggered publish)
 ```
 
