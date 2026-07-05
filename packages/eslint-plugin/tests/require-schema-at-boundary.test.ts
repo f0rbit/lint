@@ -74,6 +74,16 @@ rule_tester.run("require-schema-at-boundary", require_schema_at_boundary, {
 			code: with_decls("const load_unknown = (): unknown => JSON.parse(get_raw());"),
 		},
 		{
+			name: "object-literal property with a declared-unknown contextual type (generic default T = unknown)",
+			code: with_decls(
+				"function to_record(): WithContent {\n\treturn { ...base_fields(), content: JSON.parse(get_content_raw()) };\n}",
+			),
+		},
+		{
+			name: "unannotated arrow callback contextually constrained to unknown via the caller's explicit generic argument",
+			code: with_decls("try_catch<unknown, null>(() => JSON.parse(get_raw()), () => null);"),
+		},
+		{
 			name: "custom (non-zod) validator exposing parse and safeParse is accepted",
 			code: with_decls("custom_validator.parse(JSON.parse(get_raw()));"),
 		},
@@ -142,6 +152,18 @@ rule_tester.run("require-schema-at-boundary", require_schema_at_boundary, {
 		{
 			name: "optional-chained .json() source tracked through a raw variable",
 			code: with_decls("const maybe_data = await response_maybe?.json();\nmaybe_data.foo;"),
+			errors: [unvalidated],
+		},
+		{
+			name: "object-literal property with a non-unknown contextual type still flags",
+			code: with_decls(
+				"function to_typed_record(): WithContent<Config> {\n\treturn { ...base_fields(), content: JSON.parse(get_content_raw()) };\n}",
+			),
+			errors: [unvalidated],
+		},
+		{
+			name: "unannotated arrow callback with a non-unknown contextual type still flags",
+			code: with_decls("try_catch<Config, null>(() => JSON.parse(get_raw()), () => null);"),
 			errors: [unvalidated],
 		},
 	],

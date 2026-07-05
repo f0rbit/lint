@@ -76,11 +76,13 @@ const is_fetch_body_json_call = (
 // under before reaching the point that actually consumes it: await,
 // optional-chain, and an `as unknown` widening cast (parens aren't real AST
 // nodes under typescript-estree, so there's nothing to peel there).
-const peel_transparent = (node: TSESTree.Node): TSESTree.Node => {
+const peel_transparent = (node: TSESTree.Expression): TSESTree.Expression => {
 	let current = node;
 	for (;;) {
+		// Every Expression member's `parent` is a non-optional field in
+		// typescript-eslint's AST types (only the root Program node has none,
+		// and Program isn't part of the Expression union) — no null guard needed.
 		const parent = current.parent;
-		if (!parent) return current;
 		if (parent.type === AST_NODE_TYPES.AwaitExpression && parent.argument === current) {
 			current = parent;
 			continue;
@@ -129,33 +131,6 @@ const is_unknown_argument = (
 	return is_unknown_type(checker.getTypeOfSymbolAtLocation(param, ts_call));
 };
 
-const nearest_function = (node: TSESTree.Node): TSESTree.FunctionLike | undefined => {
-	let current = node.parent;
-	while (current) {
-		if (
-			current.type === AST_NODE_TYPES.FunctionDeclaration ||
-			current.type === AST_NODE_TYPES.FunctionExpression ||
-			current.type === AST_NODE_TYPES.ArrowFunctionExpression
-		) {
-			return current;
-		}
-		current = current.parent;
-	}
-	return undefined;
-};
-
-const is_unknown_return = (
-	checker: ts.TypeChecker,
-	services: ParserServicesWithTypeInformation,
-	fn: TSESTree.FunctionLike,
-): boolean => {
-	const ts_fn = services.esTreeNodeToTSNodeMap.get(fn);
-	const [signature] = checker.getTypeAtLocation(ts_fn).getCallSignatures();
-	if (!signature) return false;
-	const return_type = signature.getReturnType();
-	return is_unknown_type(checker.getAwaitedType(return_type) ?? return_type);
-};
-
 type Outcome =
 	| { readonly tag: "sanctioned" }
 	| { readonly tag: "defer"; readonly declarator: TSESTree.VariableDeclarator }
@@ -194,12 +169,13 @@ const classify_declarator = (
 const classify_consumption = (
 	checker: ts.TypeChecker,
 	services: ParserServicesWithTypeInformation,
-	expr: TSESTree.Node,
+	expr: TSESTree.Expression,
 	allow_defer: boolean,
 ): Outcome => {
 	const current = peel_transparent(expr);
+	// Same non-optional `parent` guarantee as peel_transparent — current is
+	// always an Expression here, so this can never be Program's rootless case.
 	const parent = current.parent;
-	if (!parent) return sanctioned;
 
 	// Any TSAsExpression reaching here is a cast AWAY from unknown (or a cast
 	// with no unknown involved at all) — `as unknown` layers were already
@@ -226,8 +202,32 @@ const classify_consumption = (
 		(parent.type === AST_NODE_TYPES.ReturnStatement && parent.argument === current) ||
 		(parent.type === AST_NODE_TYPES.ArrowFunctionExpression && parent.body === current)
 	) {
-		const fn = parent.type === AST_NODE_TYPES.ArrowFunctionExpression ? parent : nearest_function(parent);
-		return fn && is_unknown_return(checker, services, fn) ? sanctioned : violation(current, "unvalidated_boundary");
+		// Contextual typing (not the enclosing function's OWN inferred signature)
+		// is what actually sanctions this position: an unannotated callback whose
+		// return type is only `unknown` via the CALLER's explicit generic
+		// instantiation (e.g. `try_catch<unknown, E>(() => JSON.parse(x), ...)`)
+		// has its own inferred return type widened to `any` (from JSON.parse),
+		// not `unknown` — the checker's contextual type for this exact position
+		// is what carries the caller-supplied constraint. This also handles a
+		// `return` inside an async function typed `Promise<unknown>` — TS's
+		// contextual type for a return-statement argument is already awaited.
+		const contextual_type = services.getContextualType(current);
+		return contextual_type && is_unknown_type(contextual_type)
+			? sanctioned
+			: violation(current, "unvalidated_boundary");
+	}
+
+	// An object-literal property value (e.g. `{ content: JSON.parse(raw) }`
+	// returned from a function typed to return `{ content: unknown }`, such as
+	// a generic default `T = unknown`) is a declared-unknown slot exactly like
+	// a direct return — TypeScript's own contextual typing already resolves
+	// the expected type here, so ask the checker instead of re-deriving it
+	// from the enclosing object literal's own consumption.
+	if (parent.type === AST_NODE_TYPES.Property && parent.value === current && !parent.computed) {
+		const contextual_type = services.getContextualType(current);
+		return contextual_type && is_unknown_type(contextual_type)
+			? sanctioned
+			: violation(current, "unvalidated_boundary");
 	}
 
 	return violation(current, "unvalidated_boundary");
@@ -254,6 +254,14 @@ const classify_consumption = (
  *   boundary and not followed further.
  * - D1/Drizzle rows, R2 body reads, and `KV.get(..., "json")` are not
  *   sources in v1 (deferred — see the active plan's out-of-scope section).
+ *
+ * An object-literal property value (`{ content: JSON.parse(raw) }`) is
+ * sanctioned via `services.getContextualType`, the same as a direct return —
+ * this covers a generic default like `content: T = unknown`. Sibling
+ * contextual-typing positions (array-literal elements, ternary branches,
+ * default parameter values) are not checked; found via the corpus pilot
+ * (`observations/storage.ts`'s `row_to_observation`, task 2.2) and scoped
+ * narrowly to the exact shape that produced the false positive.
  */
 export const require_schema_at_boundary = create_rule({
 	name: "require-schema-at-boundary",
@@ -285,6 +293,10 @@ export const require_schema_at_boundary = create_rule({
 			for (const variable of context.sourceCode.getDeclaredVariables(declarator)) {
 				for (const reference of variable.references) {
 					if (reference.init || !reference.isRead()) continue;
+					// A reference to a `const`/`let`-declared raw variable is always a
+					// plain Identifier — the JSXIdentifier arm of the union is for JSX
+					// tag names, which are never variable references.
+					if (reference.identifier.type !== AST_NODE_TYPES.Identifier) continue;
 					report(classify_consumption(checker, services, reference.identifier, false));
 				}
 			}

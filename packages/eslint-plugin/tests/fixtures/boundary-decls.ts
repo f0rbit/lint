@@ -29,3 +29,19 @@ declare const response_maybe: Response | undefined;
 // one or more of the three members.
 declare const json_only: { json(): unknown };
 declare const json_and_text: { json(): unknown; text(): Promise<string> };
+
+// Generic-default-unknown shape (corpus's Observation<T = unknown>): the
+// `content` property's contextual type is `unknown` only through the
+// enclosing return-type annotation's generic default, not a direct
+// annotation on the property value itself.
+type WithContent<T = unknown> = { id: string; content: T };
+declare function base_fields(): { id: string };
+declare function get_content_raw(): string;
+
+// Result-style higher-order helper (pulse/corpus's `try_catch`): the
+// callback's return type is only `unknown` through the CALLER's explicit
+// generic instantiation, not an annotation on the callback itself.
+declare function try_catch<T, E>(
+	fn: () => T,
+	on_error: (e: unknown) => E,
+): { ok: true; value: T } | { ok: false; error: E };
