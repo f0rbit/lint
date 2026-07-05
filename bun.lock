@@ -12,7 +12,7 @@
     },
     "packages/eslint-config": {
       "name": "@f0rbit/eslint-config",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@f0rbit/eslint-plugin": "workspace:*",
         "@f0rbit/oxlint-config": "workspace:*",
@@ -28,13 +28,13 @@
       },
       "peerDependencies": {
         "eslint": "^10.0.0",
-        "typescript": ">=5.0.0",
+        "typescript": ">=4.8.4 <6.1.0",
         "typescript-eslint": "^8.62.0",
       },
     },
     "packages/eslint-plugin": {
       "name": "@f0rbit/eslint-plugin",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "dependencies": {
         "@typescript-eslint/utils": "8.62.1",
       },
@@ -45,12 +45,12 @@
       },
       "peerDependencies": {
         "eslint": "^10.0.0",
-        "typescript": ">=5.0.0",
+        "typescript": ">=4.8.4 <6.1.0",
       },
     },
     "packages/lint": {
       "name": "@f0rbit/lint",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "bin": {
         "f0rbit-lint": "./src/bin.ts",
       },
@@ -65,17 +65,20 @@
         "oxlint": "1.72.0",
         "typescript-eslint": "8.62.1",
       },
+      "peerDependencies": {
+        "typescript": ">=4.8.4 <6.1.0",
+      },
     },
     "packages/oxfmt-config": {
       "name": "@f0rbit/oxfmt-config",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "devDependencies": {
         "oxfmt": "0.57.0",
       },
     },
     "packages/oxlint-config": {
       "name": "@f0rbit/oxlint-config",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "devDependencies": {
         "oxlint": "1.72.0",
       },

@@ -1,6 +1,6 @@
 {
 	"name": "@f0rbit/eslint-config",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "The thin typed ESLint layer of the f0rbit two-layer lint model — define_lint_config factory with per-repo naming presets",
 	"license": "MIT",
 	"repository": {
@@ -37,7 +37,7 @@
 	},
 	"peerDependencies": {
 		"eslint": "^10.0.0",
-		"typescript": ">=5.0.0",
+		"typescript": ">=4.8.4 <6.1.0",
 		"typescript-eslint": "^8.62.0"
 	}
 }
