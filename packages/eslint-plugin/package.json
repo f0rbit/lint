@@ -1,6 +1,6 @@
 {
 	"name": "@f0rbit/eslint-plugin",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"description": "Custom typed org rules for the f0rbit ecosystem — f0rbit/must-use-result over the structural Result<T, E> shape",
 	"license": "MIT",
 	"repository": {
@@ -32,6 +32,6 @@
 	},
 	"peerDependencies": {
 		"eslint": "^10.0.0",
-		"typescript": ">=5.0.0"
+		"typescript": ">=4.8.4 <6.1.0"
 	}
 }
