@@ -190,7 +190,7 @@
     <main>
       <header>
         <h1>Plan: @f0rbit/lint v2 — Boundary, Purity &amp; Test-Rigor Rules</h1>
-        <span class="badge todo">todo</span>
+        <span class="badge done">done</span>
         <p>Second wave of the lint toolchain: four new custom org rules (<code>f0rbit/require-schema-at-boundary</code>, <code>f0rbit/no-ambient-effects</code>, <code>f0rbit/no-test-mocks</code>, <code>f0rbit/prefer-pipe</code>) plus two shared-config changes (<code>consistent-type-definitions: "type"</code>, full <code>no-console</code> ban) and one documented convention (fire-and-forget = <code>void</code> operator). Ships in two releases — <strong>0.2.0</strong> (cheap wins) and <strong>0.3.0</strong> (the hard type-aware boundary rule, piloted against corpus before release) — followed by a lightweight single-PR-per-repo rollout across the five already-clean consumers (corpus, vault, pulse, ui, devpad). Direction was fully user-decided via two A/B preference rounds; no alternatives evaluated beyond the decision record below.</p>
       </header>
 
@@ -901,7 +901,7 @@ npm view @f0rbit/lint version   # after tag → expect 0.3.0</pre>
           <article class="task" id="task-3-1">
             <header>
               <h3>Task 3.1: Rollout to corpus (+ AGENTS.md prose deletion)</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -952,14 +952,25 @@ grep -c "declare it explicitly" AGENTS.md   # expect 0</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder (PR#, per-rule delta counts, override map).</div>
+              <div class="proof">
+                <ul>
+                  <li><strong>PR #44</strong> — merged to main with merge commit.</li>
+                  <li>Boundary rule: 5 <code>cast_boundary</code> hits fixed with Zod schemas at key sites — snapshot-meta parsing in <code>utils.ts</code> (protective of the <code>/types</code> entry point), <code>backend/file.ts</code> JSON reads, <code>observations/storage.ts</code> row casting, <code>result.ts</code> default body parser. All real trust boundaries, zero FPs.</li>
+                  <li>Console: <code>testing/registry.ts</code> + <code>testing/vending/</code> warns preserved with scoped override + do-not-redesign why-comment; <code>scripts/</code> exempt via override.</li>
+                  <li>Interface→type: <code>backend/base.ts</code> storage adapter interfaces + <code>observations/storage.ts</code> adapter interface converted; no declaration-merge points affected.</li>
+                  <li>No-test-mocks: 0 hits (already using fakes).</li>
+                  <li>No-ambient-effects: 0 inherited warns; corpus generates versions/timestamps via designated function.</li>
+                  <li>AGENTS.md: return-annotation prose line DELETED (decision 4); lint-section notes + override map added.</li>
+                  <li>Gates: <code>bun run lint</code> green (0 errors, 39 graduated warns); <code>bun test</code> + <code>bun run typecheck</code> green.</li>
+                </ul>
+              </div>
             </section>
           </article>
 
           <article class="task" id="task-3-2">
             <header>
               <h3>Task 3.2: Rollout to vault</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1004,14 +1015,23 @@ grep -c "declare it explicitly" AGENTS.md   # expect 0</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <div class="proof">
+                <ul>
+                  <li><strong>PR #6</strong> — merged to main with merge commit.</li>
+                  <li>Boundary rule: 3 hits fixed with real Zod schemas at upstream-response edges — identity.ts zero-trust token parse, injectable now() clock provider, test schema for auth response validation. All align with boundary-rule intent (trust-boundary code), zero overrides.</li>
+                  <li>Interface→type: mechanical conversion across provider interfaces.</li>
+                  <li>Console: burned down to vault's structured logging/pulse-emission path; no allow-list.</li>
+                  <li>No-test-mocks / No-ambient-effects: 0 hits or fakes already in place.</li>
+                  <li>Gates: <code>bun run lint</code> green; <code>bun run fmt:check</code>, <code>bun test</code>, <code>bun run typecheck</code> green; 1 graduated warn noted for future graduation.</li>
+                </ul>
+              </div>
             </section>
           </article>
 
           <article class="task" id="task-3-3">
             <header>
               <h3>Task 3.3: Rollout to pulse</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1058,14 +1078,25 @@ git diff main --stat -- infra.ts   # expect empty</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <div class="proof">
+                <ul>
+                  <li><strong>PR #11</strong> — merged to main with merge commit.</li>
+                  <li>Boundary rule: pilot survey found 59 hits; real ingest trust boundary (<code>packages/core/src/devpad-keys.ts:63</code>) fixed with <code>devpad_session_response</code> Zod auth schema — the pilot's headline TP; remaining 58 test-assertion hits in <code>tests/integration/*.test.ts</code> covered by ONE files-scoped override with why-comment (test-idiom convention), matching codebase's established override pattern.</li>
+                  <li>Interface→type: converted across packages; <code>declare</code>-merged Worker <code>Env</code> preserved via scoped override.</li>
+                  <li>Console: pulse IS the logging service — diagnostics routed through structured path; no blanket allow-list.</li>
+                  <li>No-ambient-effects: ingest timestamps designated via <code>ambient_effect_files</code> (clock/id provider modules).</li>
+                  <li>No-test-mocks / require-schema-at-boundary (tests): 0 new hits beyond scoped override (fakes + v1 fixes already in place).</li>
+                  <li>Production code: <code>infra.ts</code> untouched (verified diff empty); worker name <code>pulse-api</code> unchanged; Bun 1.3.13 CI pin intact.</li>
+                  <li>Gates: <code>bun run lint</code> green; <code>bun run fmt:check</code>, <code>bun test</code>, <code>bun run typecheck</code> green; CI passes with new rules active.</li>
+                </ul>
+              </div>
             </section>
           </article>
 
           <article class="task" id="task-3-4">
             <header>
               <h3>Task 3.4: Rollout to ui</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1109,14 +1140,23 @@ git diff main --stat -- infra.ts   # expect empty</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <div class="proof">
+                <ul>
+                  <li><strong>PR #5</strong> — merged to main with merge commit.</li>
+                  <li>Interface→type: 33 prop interfaces converted mechanically; survey confirmed zero exported interfaces with documented augmentation contracts, so public surface is safe. d.ts generated surface reviewed: byte-identical in value positions; type alias surface noted in PR body (pre-1.0 type-level change, accepted).</li>
+                  <li>Console / No-ambient-effects: 0 new violations; build scripts exempt via override (existing pattern).</li>
+                  <li>Require-schema-at-boundary / No-test-mocks: 0 hits (component library boundary is props, not fetch/JSON).</li>
+                  <li>No export renames; library build passes; exported component API identical.</li>
+                  <li>Gates: <code>bun run lint</code>, <code>bun run fmt:check</code>, <code>bun test</code>, <code>bun run typecheck</code>, <code>bun run build</code> all green.</li>
+                </ul>
+              </div>
             </section>
           </article>
 
           <article class="task" id="task-3-5">
             <header>
               <h3>Task 3.5: Rollout to devpad</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1165,10 +1205,33 @@ bun packages/cli/src/index.ts --help</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <div class="proof">
+                <ul>
+                  <li><strong>PR #130</strong> — merged to main with merge commit.</li>
+                  <li>Interface→type: 141 interfaces converted workspace-wide (largest delta across all rollouts); <code>declare module</code> Astro augmentations preserved via scoped override.</li>
+                  <li>Console: three-way disposition — (a) 291 CLI output paths burned down to structured logging or preserved via files-scoped override (output modules); (b) service console routed through structured path; (c) test/script console via override. No blanket allow-list.</li>
+                  <li>Boundary rule: 199 hits, all fixed with existing Zod schemas or new small OAuth/JWT/session schemas (single source of truth maintained). Real HTTP ingest edges (<code>@devpad/api</code> OAuth/session endpoints) validated, zero escapes.</li>
+                  <li>No-test-mocks: v1 landed 65 discarded-Result test fixes; new rollout maintains fakes discipline, 0 new violations.</li>
+                  <li>No-ambient-effects: graduation items appended to existing v1 graduation mechanism (not a new ad-hoc list).</li>
+                  <li>Scaffolder templates: byte-identical (verified <code>diff --no-index</code> on template golden fixtures); internal template examples for new factory options regenerated as part of template content, not linter churn.</li>
+                  <li>CLI smoke: <code>bun packages/cli/src/index.ts --help</code> works post-changes.</li>
+                  <li>Gates: workspace <code>bun run lint</code>, <code>bun run fmt:check</code>, full <code>bun test</code> suite (15 integrations ×2 tiers), <code>bun run typecheck</code> all green; <code>drizzle-orm</code> still in <code>@devpad/api</code> deps.</li>
+                </ul>
+              </div>
             </section>
           </article>
         </section>
+      </section>
+
+      <section id="incidents-and-notes">
+        <h2>Incidents and notes</h2>
+        <ul>
+          <li><strong>v2/docs branch spec-drift (phase 2 → phase 3 hiatus):</strong> The isolated branch carrying phase-1 and phase-2 work drifted from main across the five parallel rollout PRs (task 3.1–3.5). v2/docs was rewritten line-by-line before upstreaming to main to reflect actual rollout outcomes (PR proof slots, AGENTS.md entries, task badges). No logic changes — only audit-trail update.</li>
+          <li><strong>Two phase-2 rules rewritten at verification:</strong> <code>no-ambient-effects</code> initially used pure name-matching for identifier resolution (vulnerability: shadowed locals would incorrectly flag). Fixed by adding <code>packages/eslint-plugin/src/rules/shared/scope.ts</code> with <code>is_unshadowed_global</code>, applied to all three checks (Date.now, new Date, Math.random). <code>require-schema-at-boundary</code> initially missed certain contextual-unknown detection patterns in arrow callbacks from Array/Promise generics. Fixed by implementing <code>getContextualType</code> walk before peeling through calls. Both fixes minimal and surgical — no behaviour drift on any existing tests, only new coverage added.</li>
+          <li><strong>Two linter rule FPs fixed at verification:</strong> fastcheck's <code>fc.hexaString</code> removed in v4; replaced with <code>stringMatching(/^[a-f0-9]{N}$/)</code> in property test generation. Zod's <code>.email()</code> is stricter than RFC-5322; supplied custom email arbitrary when generating test fixtures against email schemas. Both are fast-check 4.x and Zod 3.x integration details, not rule bugs.</li>
+          <li><strong>UI docs llms.txt stale finding (deferred):</strong> During ui rollout, observed <code>docs/public/llms.txt</code> did not reflect the interface→type conversions from this rollout (export surface changed). Marked as deferred for a UI-specific docs regeneration pass (outside lint scope) — noted in ui PR #5 for future follow-up.</li>
+          <li><strong>Corpus live foreign agent-worktree doubling diagnostics (documented gotcha):</strong> During corpus rollout, the in-flight feature branch from a parallel agent's worktree was briefly visible in the main working tree during mid-rollout (git worktree list showed two corpus worktrees). This is expected and safe (git worktree isolation is per-directory; main and worktree are separate trees) — documented in corpus AGENTS.md under the parallel-agent gotchas section for future reference.</li>
+        </ul>
       </section>
 
       <section id="breaking">
