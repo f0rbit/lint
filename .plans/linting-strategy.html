@@ -234,7 +234,7 @@
     <main>
       <header>
         <h1>Plan: @f0rbit/lint — Ecosystem Linting + Formatting</h1>
-        <span class="badge doing">doing</span>
+        <span class="badge done">done</span>
         <p>Build a new monorepo <code>@f0rbit/lint</code> at <code>~/dev/lint</code> housing all lint + format configuration for the f0rbit ecosystem, then roll it out to corpus (pilot), the devpad scaffolder, and pulse / vault / devpad / ui. Strategy is <strong>Option 2: hybrid oxlint fast gate + thin typed ESLint layer</strong>, with <strong>oxfmt as the formatter everywhere (hard requirement)</strong>. The ESLint layer carries the typed rule family plus the custom type-aware <code>must-use-result</code> rule over the corpus <code>Result&lt;T,E&gt;</code> shape. Configs ship as factory functions parameterised per repo (naming preset, package name). This plan completes the earlier decision-stop plan that lived at <code>~/dev/corpus/.plans/linting-strategy.html</code> (now a tombstone pointing here).</p>
       </header>
 
@@ -1306,7 +1306,7 @@ gh pr checks --watch</pre>
           <article class="task" id="task-4-1">
             <header>
               <h3>Task 4.1: Add lint/format wiring to the pipelines scaffolder template</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1353,14 +1353,14 @@ gh pr checks --watch</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <div class="proof">Template package.json updated with <code>@f0rbit/lint</code> + scripts; <code>eslint.config.ts</code>, <code>.oxlintrc.json</code>, <code>.oxfmtrc.json</code> stubs added with drift test; <code>deploy.yml</code> gains lint+fmt gate before build; template AGENTS.md documents lint/format section. Scaffolder tests pass (devpad PR #125); later refined naming preset to snake_case in PR #129.</div>
             </section>
           </article>
 
           <article class="task" id="task-4-2">
             <header>
               <h3>Task 4.2: End-to-end scaffold smoke test + devpad AGENTS.md</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1404,7 +1404,7 @@ gh pr checks --watch</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <div class="proof">Throwaway scaffold created via <code>bunx devpad pipelines init</code>, passed <code>bun install && bun run lint && bun run fmt:check && bun run typecheck</code> on pristine template. Deliberate must-use-result violation confirmed to fail lint with correct rule ID. devpad AGENTS.md updated with lint/format section and hand-sync rule for pre-existing packages.</div>
             </section>
           </article>
         </section>
@@ -1416,7 +1416,7 @@ gh pr checks --watch</pre>
           <article class="task" id="task-5-1">
             <header>
               <h3>Task 5.1: Rollout to vault</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1461,14 +1461,14 @@ gh pr checks --watch</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <div class="proof">vault: Three-PR rollout complete. PR #3 wiring: dependencies + camelCase factory config + CI gate. PR #4 normalization: oxfmt format-only, single squashed commit. PR #5 fixes + .git-blame-ignore-revs + AGENTS.md lint/format section. Fire-and-forget pulse-emit calls handled explicitly via local Result handling. All gates (lint, fmt:check, test, typecheck) passing on main.</div>
             </section>
           </article>
 
           <article class="task" id="task-5-2">
             <header>
               <h3>Task 5.2: Rollout to pulse</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1511,14 +1511,14 @@ gh pr checks --watch</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <div class="proof">pulse: Three-PR rollout complete. PR #7 wiring: camelCase factory config + CI workflow (Bun 1.3.13 pin preserved) + gate script. PR #8 normalization: oxfmt format-only. PR #9 fixes (D1/Drizzle boundaries use Zod validation) + .git-blame-ignore-revs + AGENTS.md. infra.ts semantically unchanged (worker name <code>pulse-api</code> preserved). Hotfix #10 followed for edge cases. All gates passing on main.</div>
             </section>
           </article>
 
           <article class="task" id="task-5-3">
             <header>
               <h3>Task 5.3: Rollout to ui</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1561,14 +1561,14 @@ gh pr checks --watch</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <div class="proof">ui: Three-PR rollout complete (PR #2, #3, #4 — first CI created). Factory config generated with camelCase preset (verified via src/ inspection). PR #2 wiring + deps. PR #3 normalization: oxfmt cleanly formats JSX/TSX on pinned version (no exclusions needed). PR #4 fixes + CI gate + AGENTS.md. Published API surface unchanged (component exports identical before/after). Library build passes post-normalization. All gates green.</div>
             </section>
           </article>
 
           <article class="task" id="task-5-4">
             <header>
               <h3>Task 5.4: Rollout to devpad</h3>
-              <span class="badge todo">todo</span>
+              <span class="badge done">done</span>
             </header>
             <dl class="meta">
               <dt>Files</dt>
@@ -1612,7 +1612,7 @@ gh pr checks --watch</pre>
             </section>
             <section data-kind="proof">
               <h4>Proof</h4>
-              <div class="empty-proof">To be filled by verification coder.</div>
+              <div class="proof">devpad: Three-PR rollout complete (PR #126, #127, #128, #129). PR #126 wiring: root config with camelCase preset + workspace scripts + TS6 interaction hotfix. PR #127 normalization: oxfmt format-only (scaffolder/templates excluded from fmt via config). PR #128 hotfix + fixes (D1 boundaries with Zod, Astro excluded from typed layer). PR #129 warn-tier graduation plan for naming + unsafe-* families with phased devpad-task tracking. devpad CLI smoke test passes. All gates green. Workspace-wide lint/fmt coverage with per-package overrides where needed.</div>
             </section>
           </article>
         </section>
@@ -1630,6 +1630,16 @@ gh pr checks --watch</pre>
 
       <section id="out-of-scope">
         <h2>Out of scope</h2>
+
+        <h3>Incidents & lessons</h3>
+        <ul>
+          <li><strong>0.1.2 bun.lock pack-version bug:</strong> Discovered during phase-2 development; bun v1.0–1.1 incorrectly pinned oxlint/oxfmt via pack-version. Fixed in 0.1.3 with regression test added to prevent recurrence. Impact: minor version bump only; consumers re-lock on upgrade.</li>
+          <li><strong>0.1.4 factory preset gaps:</strong> ui rollout (phase-5) revealed missing camelCase preset variants (component exports with PascalCase, function exports with camelCase not separately configurable). Fixed in 0.1.5 by expanding preset mechanics. Lesson: test scaffolded-style repos early — factory contract iteration surfaces before wide adoption.</li>
+          <li><strong>0.1.5 peer hardening:</strong> typescript range in <code>@f0rbit/lint</code>'s peerDependencies now mirrors typescript-eslint's (synced with each release). Earlier devpad-side TS6 breakage was devpad's own stray root pin × hoisted-linker interaction, NOT a lint packaging issue — clarified in AGENTS.md. Lesson: lint repo peerDeps must track the type-checker's, not downstream versions.</li>
+          <li><strong>devpad phased warn-tier graduation:</strong> naming and unsafe-* rule families have legitimate pre-refactor code across devpad's packages. Rather than mass-refactor or weaken rules globally, violations are selectively warn-downgraded with explicit graduation issues. Graduation tracked in devpad's issue tracker (see devpad AGENTS.md for link). Lesson: warn-downgrade + graduation notes are the path for large repos with heterogeneous codebase ages; removes time pressure on fixes.</li>
+        </ul>
+
+        <h3>Deferred items</h3>
         <ul>
           <li><strong>Zod-at-edge custom rule</strong> (no-unvalidated-<code>JSON.parse</code>/fetch) — next rule in <code>@f0rbit/eslint-plugin</code> after must-use-result proves the pipeline.</li>
           <li><strong>Non-JS/TS language configs</strong> (rustfmt, etc.) — the <code>packages/&lt;tool&gt;-config</code> convention reserves the space; nothing ships now.</li>
